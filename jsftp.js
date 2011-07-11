@@ -5,24 +5,34 @@ var ftpPasv = require("./ftpPasv");
 var FTP_PORT = 21;
 
 var RE_PASV = /[-\d]+,[-\d]+,[-\d]+,[-\d]+,([-\d]+),([-\d]+)/;
-var RE_NEWLINE = /\r\n|\n/;
-var RE_NEWLINE_END = /\r\n|\n$/;
 var RE_MULTILINE  = /(\d\d\d)-/;
 var RE_RESPONSE = /^(\d\d\d)\s/;
 
-var SINGLE_COMMANDS = ["ABOR", "PWD", "CDUP", "NOOP", "QUIT", "SYST"];
-var PARAM_COMMANDS  = ["CWD", "DELE", "MDTM", "MKD", "MODE", "NLST", "PASS",
-                       "RETR", "RMD", "RNFR", "RNTO", "SITE", "STOR", "USER"];
+var COMMANDS = [
+    // Commands without parameters
+    "ABOR", "PWD", "CDUP", "NOOP", "QUIT", "SYST",
+    // Commands with one or more parameters
+    "CWD", "DELE", "LIST", "MDTM", "MKD", "MODE", "NLST", "PASS", "RETR", "RMD",
+    "RNFR", "RNTO", "SITE", "STAT", "STOR", "USER"
+];
 
 var Ftp = module.exports = function (cfg) {
     Gab.apply(this, arguments);
 
+    // Generate generic methods from parameter names. They can easily be
+    // overriden if we need special behavior.
     var self = this;
-    SINGLE_COMMANDS.forEach(function(cmd) {
+    COMMANDS.forEach(function(cmd) {
         var lcCmd = cmd.toLowerCase();
         if (!self[lcCmd]) {
             self[lcCmd] = function() {
-                self.processCmd(cmd);
+                if (arguments.length) {
+                    var args = Array.prototype.slice.call(arguments).join(" ");
+                    self.processCmd(cmd + " " + args);
+                }
+                else {
+                    self.processCmd(cmd);
+                }
             };
         }
     });
@@ -199,20 +209,6 @@ Ftp.prototype.download = function(filePath) {
     }
 };
 Ftp.prototype.get  = Ftp.prototype.download;
-Ftp.prototype.retr = Ftp.prototype.download;
-
-Ftp.prototype.list = function(path) {
-    this.processCmd("STAT " + path);
-};
-/*
-Ftp.prototype.pwd = function(path) {
-    this.processCmd("PWD");
-};
-
-Ftp.prototype.quit = function(path) {
-    this.processCmd("QUIT");
-};
-*/
 
 Ftp.prototype.ftpHandleConnect = function(res) {
     var code = res.substring(0, 3); // get response code
@@ -224,7 +220,4 @@ Ftp.prototype.ftpHandleConnect = function(res) {
         throw new Error("ftp login failed");
     }
 };
-
-
-
 

@@ -7,7 +7,7 @@ var ftp = new Ftp({
     pass: "ketu48"
 });
 
-ftp.list("/");
+ftp.stat("/");
 ftp.pwd();
 ftp.setBinary(true);
 
