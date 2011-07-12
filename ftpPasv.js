@@ -1,27 +1,40 @@
+var Net = require("net");
 var Gab = require("./support/gab/gab");
 
 var ftpPasv = module.exports = function(host, port) {
     Gab.apply(this, arguments);
 
-    this.setTerminator("\n");
+    this.data = ""
+    this.setTerminator("\r\n");
 
-    this.socket = Net.createConnection(port, host);
-    this.connect(host, port);
+    this.connect(port, host);
 };
 
 ftpPasv.prototype = new Gab;
 ftpPasv.prototype.constructor = ftpPasv;
 
-ftpPasv.prototype.writable = function() {
-    return false;
-};
+(function() {
 
-ftpPasv.prototype.handleConnect = function(e) { console.log(e); };
+    this.collectIncomingData = function(data) {
+        this.data += data;
+    };
 
-ftpPasv.prototype.handleExpt = function() {
-    this.close();
-};
+    this.foundTerminator = function() {
+        var data = this.data;
+        this.data = "";
+        console.log(data)
+    };
 
-ftpPasv.prototype.handleClose = function() {
-    this.close();
-};
+    this.writable = function() {
+        return false;
+    };
+
+    this.handleExpt = function() {
+        this.close();
+    };
+
+    this.handleClose = function() {
+        this.close();
+    };
+}).call(ftpPasv.prototype);
+
