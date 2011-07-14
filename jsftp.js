@@ -35,7 +35,7 @@ var Ftp = module.exports = function (cfg) {
                     if (typeof args[args.length - 1] == "function")
                         callback = args.pop();
 
-                    fullCmd += " " + args.join(" ");
+                    fullCmd += args.length ? " " + args.join(" ") : "";
 
                     if (callback)
                         this.customResponse[cmd] = callback;
@@ -80,16 +80,15 @@ Ftp.prototype.constructor = Ftp;
 
 Ftp.handleResponse = {
     "USER": function(res) {
-        if (res.code === "230") {
+        if (res.code === "230")
             return; // user accepted
-        }
-        else if (res.code === "331" || res.code === "332") {
+
+        if (res.code === "331" || res.code === "332") {
             this.push("PASS " + this.pass + "\r\n");
             this.handler = Ftp.handleResponse.PASS;
         }
-        else {
+        else
             throw new Error("ftp login failed: user name not accepted");
-        }
     },
     "PASS": function(res) {
         if (res.code === "230") {
@@ -228,29 +227,41 @@ Ftp.handleResponse = {
         }
     };
 
+    this.setPassive = function(mode, callback) {
+        this.pasv(function(res) {
+            if (res.code !== "227")
+                return; // pasv failed
+
+            var match = RE_PASV.exec(res.line);
+            if (!match)
+                return; // bad port
+
+            var port = (parseInt(match[1]) & 255) * 256 + (parseInt(match[2]) & 255);
+            this.dataConn = new ftpPasv(this.host, port, mode, callback);
+        });
+    };
+
     // Downloads a file from FTP server, given a valid Path. It uses the RETR
     // command to retrieve the file. the `get` and `retr` methods are synonymous of
     // this method.
-    this.download = function(filePath) {
-        this.type("I", function(typeRes) {
-            var code = res.substring(0, 3); // get response code
-            if (code === "250") {
-                this.pasv();
-                this.retr(filePath, function(retrRes) {
-                    if (retrRes.substring(0, 3) === "150") {
-                        console.log("alright")
-                    }
-                });
+    this.retrBinary = function(filePath, callback) {
+        var binary = "I";
+        this.type(binary, function(res) {
+            if (res.code === "250") {
+                this.setPassive(mode, callback);
+                this.retr(filePath);
             }
         });
     };
 
-    this.list = function(path, callback) {
-        if (callback)
-            this.customResponse[cmd] = callback;
-
-        this.pasv();
-        this.processCmd("LIST " + path);
+    this.list = function(filePath, callback) {
+        var mode = "A";
+        this.type(mode, function(typeRes) {
+            if (typeRes.code === "250" || typeRes.code === "200") {
+                this.setPassive(mode, callback);
+                this.processCmd("LIST" + (filePath ? " " + filePath : ""));
+            }
+        });
     };
 
     // Connect handler
