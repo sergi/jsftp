@@ -10,7 +10,7 @@ var ftpPasv = module.exports = function(host, port, mode, callback) {
     var self = this;
     if (mode === "I") { // Binary mode
         this.handleEnd = function(e) {
-            callback(err, concatBuffers(self.data))
+            callback(e, concat(self.data))
         };
         this.setTerminator();
     }
@@ -33,19 +33,12 @@ ftpPasv.prototype.constructor = ftpPasv;
         this.data.push(data);
     };
 
-    this.foundTerminator = function() { };
+    this.foundTerminator = function() {};
 
     this.writable = function() {
         return false;
     };
 
-    this.handleExpt = function() {
-        this.close();
-    };
-
-    this.handleClose = function() {
-        this.close();
-    };
 }).call(ftpPasv.prototype);
 
 
@@ -53,27 +46,27 @@ ftpPasv.prototype.constructor = ftpPasv;
 function concat(bufs) {
     var buffer, length = 0, index = 0;
 
-    if (!Array.isArray(bufs)) {
-      bufs = Array.prototype.slice.call(arguments);
-    }
+    if (!Array.isArray(bufs))
+        bufs = Array.prototype.slice.call(arguments);
+
     for (var i=0, l=bufs.length; i<l; i++) {
-      buffer = bufs[i];
-      if (!Buffer.isBuffer(buffer)) {
-        buffer = bufs[i] = new Buffer(buffer);
-      }
-      length += buffer.length;
+        buffer = bufs[i];
+
+        if (!Buffer.isBuffer(buffer))
+            buffer = bufs[i] = new Buffer(buffer);
+
+        length += buffer.length;
     }
+
     buffer = new Buffer(length);
 
     bufs.forEach(function (buf, i) {
-      buf = bufs[i];
-      buf.copy(buffer, index, 0, buf.length);
-      index += buf.length;
-      delete bufs[i];
+        buf = bufs[i];
+        buf.copy(buffer, index, 0, buf.length);
+        index += buf.length;
+        delete bufs[i];
     });
 
     return buffer;
-  }
-
-
+}
 

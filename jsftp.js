@@ -245,11 +245,11 @@ Ftp.handleResponse = {
     // command to retrieve the file. the `get` and `retr` methods are synonymous of
     // this method.
     this.retrBinary = function(filePath, callback) {
-        var binary = "I";
-        this.type(binary, function(res) {
-            if (res.code === "250") {
+        var mode = "I";
+        this.type(mode, function(res) {
+            if (res.code === "250" || res.code === "200") {
                 this.setPassive(mode, callback);
-                this.retr(filePath);
+                this.processCmd("RETR" + (filePath ? " " + filePath : ""));
             }
         });
     };

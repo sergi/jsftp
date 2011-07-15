@@ -1,26 +1,55 @@
+var assert = require("assert");
 var Ftp = require("./jsftp");
-// Fire it up. For test purposes only!
-var ftp = new Ftp({
-    port: 2021,
+var Fs = require("fs");
+var exec = require('child_process').spawn;
+
+var FTPCredentials = {
     host: "localhost",
     user: "sergi",
-});
+    port: 2021
+};
 
+var CWD = process.cwd();
+console.log(CWD)
 
-//ftp.stat("/", function() {
-ftp.cwd("/Users/sergi/", function(res) {
-    if (res.code == 250 || res.code == 200) {
-        ftp.pwd(function(res) {
-            console.log("All together now: ", res);
-            ftp.syst();
-            ftp.pwd();
-            ftp.list("/Users/sergi/", function(err, data) {
-                console.log(data);
-                console.log("Listed!");
-            })
+// Execution ORDER: test.setUpSuite, setUp, testFn, tearDown, test.tearDownSuite
+module.exports = {
+    timeout: 10000,
+
+    setUp: function(next) {
+        exec('/bin/launchctl', ['load', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
+
+        this.ftp = new Ftp(FTPCredentials);
+        next();
+    },
+
+    tearDown: function(next) {
+        exec('/bin/launchctl', ['unload', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
+        this.ftp = null;
+        next();
+    },
+
+    "test print working directory": function(next) {
+        var self = this;
+        this.ftp.pwd(function(res) {
+            var code = parseInt(res.code, 10);
+            assert.ok(code === 257, "PWD command was not successful");
+            next();
+        });
+    },
+    "test current working directory": function(next) {
+        var self = this;
+        this.ftp.cwd("/Users/sergi/", function(res) {
+            var code = parseInt(res.code, 10);
+            assert.ok(code === 200 || code === 250, "CWD command was not successful");
+
+            self.ftp.cwd("/Users/serig/", function(res) {
+                code = parseInt(res.code, 10);
+                assert.ok(code === 550, "A (wrong) CWD command was successful. It should have failed");
+                next();
+            });
         });
     }
-});
-//});
-//ftp.setBinary(true);
-setTimeout(function(){ ftp.quit(); }, 5000);
+};
+
+!module.parent && require("./support/async/lib/test").testcase(module.exports, "FTP"/*, timeout*/).exec();
