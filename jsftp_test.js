@@ -6,11 +6,10 @@ var exec = require('child_process').spawn;
 var FTPCredentials = {
     host: "localhost",
     user: "sergi",
-    port: 2021
+    port: 2021,
 };
 
 var CWD = process.cwd();
-console.log(CWD)
 
 // Execution ORDER: test.setUpSuite, setUp, testFn, tearDown, test.tearDownSuite
 module.exports = {
@@ -37,11 +36,18 @@ module.exports = {
             next();
         });
     },
+
     "test current working directory": function(next) {
         var self = this;
-        this.ftp.cwd("/Users/sergi/", function(res) {
+        this.ftp.cwd(CWD, function(res) {
             var code = parseInt(res.code, 10);
             assert.ok(code === 200 || code === 250, "CWD command was not successful");
+
+            self.ftp.pwd(function(res) {
+                var code = parseInt(res.code, 10);
+                assert.ok(code === 257, "PWD command was not successful");
+                assert.ok(res.text.indexOf(CWD), "Unexpected CWD");
+            })
 
             self.ftp.cwd("/Users/serig/", function(res) {
                 code = parseInt(res.code, 10);
