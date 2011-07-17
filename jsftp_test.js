@@ -49,7 +49,7 @@ module.exports = {
                 assert.ok(res.text.indexOf(CWD), "Unexpected CWD");
             })
 
-            self.ftp.cwd("/Users/serig/", function(res) {
+            self.ftp.cwd("/unexistentDir/", function(res) {
                 code = parseInt(res.code, 10);
                 assert.ok(code === 550, "A (wrong) CWD command was successful. It should have failed");
                 next();

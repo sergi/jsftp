@@ -98,6 +98,7 @@ Ftp.handleResponse = {
             throw new Error("ftp login failed: password not accepted");
         }
     },
+    /*
     "PASV": function(res) {
         if (res.code !== "227")
             return; // pasv failed
@@ -110,6 +111,7 @@ Ftp.handleResponse = {
         // establish data connection
         this.dataConn = new ftpPasv(this.host, port);
     }
+    */
 };
 
 (function() {
@@ -208,7 +210,7 @@ Ftp.handleResponse = {
             if (this.commands.length) {
                 var command = this.commands.shift();
 
-                if (this.commands.length && typeof this.commands[0] === "function") {
+                if (typeof this.commands[0] === "function") {
                     this.handler = this.commands.shift();
                 }
                 console.log("\nC:", "'" + command + "'");
