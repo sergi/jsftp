@@ -17,9 +17,11 @@ module.exports = {
 
     setUp: function(next) {
         exec('/bin/launchctl', ['load', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
-
-        this.ftp = new Ftp(FTPCredentials);
-        next();
+        var self = this;
+        setTimeout(function() {
+            self.ftp = new Ftp(FTPCredentials);
+            next();
+        }, 200);
     },
 
     tearDown: function(next) {
@@ -36,7 +38,6 @@ module.exports = {
             next();
         });
     },
-
     "test current working directory": function(next) {
         var self = this;
         this.ftp.cwd(CWD, function(res) {
