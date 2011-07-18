@@ -28,20 +28,18 @@ var Ftp = module.exports = function (cfg) {
         if (!self[lcCmd]) {
             self[lcCmd] = function() {
                 var fullCmd = cmd;
+                var callback;
+
                 if (arguments.length) {
-                    var callback;
                     var args = Array.prototype.slice.call(arguments)
 
                     if (typeof args[args.length - 1] == "function")
                         callback = args.pop();
 
                     fullCmd += args.length ? " " + args.join(" ") : "";
-
-                    if (callback)
-                        this.customResponse[cmd] = callback;
                 }
 
-                self.processCmd(fullCmd);
+                self.processCmd(fullCmd, callback);
 
                 return self;
             };
@@ -170,16 +168,6 @@ Ftp.handleResponse = {
             console.log("R:", line);
         });
 
-        if (this.lastCmd) {
-            if (this.customResponse[this.lastCmd]) {
-                this.handler = this.customResponse[this.lastCmd];
-                this.customResponse[this.lastCmd] = null;
-            }
-            else if (Ftp.handleResponse[this.lastCmd]) {
-                this.handler = Ftp.handleResponse[this.lastCmd];
-            }
-        }
-
         // process response
         if (this.handler) {
             // call the response handler
@@ -205,27 +193,32 @@ Ftp.handleResponse = {
         this.processCmd();
     };
 
-    this.processCmd = function(cmd) {
-        if (!cmd) {
+    this.processCmd = function(cmd, callback) {
+        if (arguments.length) {
+            this.commands.push([cmd, callback]);
+            if (!this.busy && this.acceptingConnections)
+                this.processCmd();
+        }
+        else {
             if (this.commands.length) {
                 var command = this.commands.shift();
-
-                if (typeof this.commands[0] === "function") {
-                    this.handler = this.commands.shift();
-                }
-                console.log("\nC:", "'" + command + "'");
-
-                this.push(command + "\r\n");
+                var cmdText = command[0];
                 // Retrieve the command name
-                this.lastCmd = /^(\w+)\s*/.exec(command)[1];
+                this.lastCmd = /^(\w+)\s*/.exec(cmdText)[1];
+
+                if (command.length === 2 && typeof command[1] === "function")
+                    this.handler = command[1];
+                else if (Ftp.handleResponse[this.lastCmd])
+                    this.handler = Ftp.handleResponse[this.lastCmd];
+                else
+                    this.handler = null;
+
+                console.log("\nC:", "'" + cmdText + "'");
+
+                this.push(cmdText + "\r\n");
             }
             else
                 this.busy = false;
-        }
-        else {
-            this.commands.push(cmd);
-            if (!this.busy && this.acceptingConnections)
-                this.processCmd();
         }
     };
 
