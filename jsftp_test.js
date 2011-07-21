@@ -7,6 +7,7 @@ var FTPCredentials = {
     host: "localhost",
     user: "sergi",
     port: 2021,
+    pass: "2x8hebsndr9"
 };
 
 var CWD = process.cwd();
@@ -32,30 +33,48 @@ module.exports = {
 
     "test print working directory": function(next) {
         var self = this;
-        this.ftp.pwd(function(res) {
-            var code = parseInt(res.code, 10);
-            assert.ok(code === 257, "PWD command was not successful");
-            next();
+        this.ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(res) {
+            self.ftp.raw.pwd(function(res) {
+                var code = parseInt(res.code, 10);
+                assert.ok(code === 257, "PWD command was not successful");
+
+                self.ftp.raw.quit(function(res) {
+                    next();
+                });
+            });
         });
     },
     "test current working directory": function(next) {
-        var self = this;
-        this.ftp.cwd(CWD, function(res) {
-            var code = parseInt(res.code, 10);
-            assert.ok(code === 200 || code === 250, "CWD command was not successful");
-
-            self.ftp.pwd(function(res) {
+        var ftp = this.ftp;
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(res) {
+            ftp.raw.cwd(CWD, function(res) {
                 var code = parseInt(res.code, 10);
-                assert.ok(code === 257, "PWD command was not successful");
-                assert.ok(res.text.indexOf(CWD), "Unexpected CWD");
-            })
+                assert.ok(code === 200 || code === 250, "CWD command was not successful");
 
-            self.ftp.cwd("/unexistentDir/", function(res) {
-                code = parseInt(res.code, 10);
-                assert.ok(code === 550, "A (wrong) CWD command was successful. It should have failed");
-                next();
+                ftp.raw.pwd(function(res) {
+                    var code = parseInt(res.code, 10);
+                    assert.ok(code === 257, "PWD command was not successful");
+                    assert.ok(res.text.indexOf(CWD), "Unexpected CWD");
+                })
+
+                ftp.raw.cwd("/unexistentDir/", function(res) {
+                    code = parseInt(res.code, 10);
+                    assert.ok(code === 550, "A (wrong) CWD command was successful. It should have failed");
+                    next();
+                });
             });
         });
+    },
+    "test passive listing of current directory": function(next) {
+        var ftp = this.ftp;
+
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(res) {
+            ftp.list(CWD, function(err, res){
+                console.log(res)
+                next()
+            })
+        })
+
     }
 };
 

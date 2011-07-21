@@ -1,46 +1,36 @@
 var Net = require("net");
-var Gab = require("./support/gab/gab");
+var S = require("./streamer");
 
 var ftpPasv = module.exports = function(host, port, mode, callback) {
-    Gab.apply(this, arguments);
-
     this.data = [];
     this.mode = mode;
 
+    var socket = this.socket = Net.createConnection(port, host);
+    socket.setEncoding("utf8");
+
+    var input = function(next, stop) {
+        socket.on("data", next);
+        socket.on("end", stop);
+        socket.on("error", stop);
+    };
+
     var self = this;
-    if (mode === "I") { // Binary mode
-        this.handleEnd = function(e) {
-            callback(e, concat(self.data))
-        };
-        this.setTerminator();
-    }
-    else {
-        this.handleEnd = function(e) {
-            callback(e || null, self.data.join("\n"))//.replace("", ""))
-        }
-        this.setTerminator("\r\n");
-    }
+    var requests = function(source) {
+        source(function(data) {
+            self.data.push(data);
+        }, function(error) {
+            if (error)
+                callback(error);
 
-    this.connect(port, host);
+            if (mode === "I")
+                callback(null, concat(self.data));
+            else if(mode === "A")
+                callback(null, self.data.join("\n"));
+        });
+    };
+
+    var incoming = S.list(requests(input));
 };
-
-ftpPasv.prototype = new Gab;
-ftpPasv.prototype.constructor = ftpPasv;
-
-(function() {
-
-    this.collectIncomingData = function(data) {
-        this.data.push(data);
-    };
-
-    this.foundTerminator = function() {};
-
-    this.writable = function() {
-        return false;
-    };
-
-}).call(ftpPasv.prototype);
-
 
 // From https://github.com/coolaj86/node-bufferjs
 function concat(bufs) {

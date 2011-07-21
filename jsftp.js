@@ -1,12 +1,11 @@
 var Net = require("net");
 var ftpPasv = require("./ftpPasv");
-var S = require("./streamer")
+var S = require("./streamer");
 
 var FTP_PORT = 21;
-
 var RE_PASV = /[-\d]+,[-\d]+,[-\d]+,[-\d]+,([-\d]+),([-\d]+)/;
-var RE_MULTILINE = /^(\d\d\d)-/;
-var RE_RESPONSE = /^(\d\d\d)\s(.*)/;
+var RE_RES = /^(\d\d\d)\s(.*)/;
+var RE_MULTI = /^(\d\d\d)-/;
 var RE_NL_END = /\r\n$/;
 var RE_NL = /\r\n/;
 
@@ -24,16 +23,16 @@ var Ftp = module.exports = function (cfg) {
     // it is the responsability of the user to validate the parameters.
     this.raw = {};
 
+    var self = this;
     COMMANDS.forEach(function(cmd) {
         var lcCmd = cmd.toLowerCase();
-        if (!this.raw[lcCmd]) {
-            var self = this;
-            this.raw[lcCmd] = function() {
+        if (!self.raw[lcCmd]) {
+            self.raw[lcCmd] = function() {
                 var fullCmd = cmd;
                 var callback;
 
                 if (arguments.length) {
-                    var args = Array.prototype.slice.call(arguments)
+                    var args = Array.prototype.slice.call(arguments);
 
                     if (typeof args[args.length - 1] == "function")
                         callback = args.pop();
@@ -45,7 +44,7 @@ var Ftp = module.exports = function (cfg) {
                 self.push(fullCmd, callback);
             };
         }
-    }, this);
+    });
 
     // Inizialization of connection and credentials details
     var port = cfg.port || FTP_PORT;
@@ -63,8 +62,8 @@ var Ftp = module.exports = function (cfg) {
 
     // Stream of incoming data.
     var input = function(next, stop) {
-        socket.on('data', next);
-        socket.on('end', stop);
+        socket.on("data", next);
+        socket.on("end", stop);
         socket.on("error", stop);
     };
 
@@ -75,47 +74,36 @@ var Ftp = module.exports = function (cfg) {
 
         return function stream(next, stop) {
             source(function(data) {
-                var lines = data.replace(RE_NL_END, "").replace(RE_NL, NL).split(NL)
+                var lines = data.replace(RE_NL_END, "").replace(RE_NL, NL).split(NL);
 
                 lines.forEach(function(line) {
-                    var simpleRes = RE_RESPONSE.exec(line);
+                    var simpleRes = RE_RES.exec(line);
                     var multiRes;
 
                     if (simpleRes) {
-                        var code = parseInt(simpleRes[1]);
+                        var code = parseInt(simpleRes[1], 10);
                         if (buffer.length) {
                             buffer.push(line);
-                            if (currentCode === code) {
-                                var _currentCode = currentCode;
-                                var _buffer = buffer.join("\n");
 
+                            if (currentCode === code) {
+                                line = buffer.join(NL);
                                 buffer = [];
                                 currentCode = 0;
-
-                                next({
-                                    code: _currentCode,
-                                    text: _buffer
-                                });
                             }
                         }
-                        else {
-                            next({
-                                code: code,
-                                text: line
-                            });
-                        }
-                    }
-                    else if (!buffer.length && (multiRes = RE_MULTILINE.exec(line))) {
-                        currentCode = parseInt(multiRes[1]);
-                        buffer.push(line);
+
+                        next({ code: code, text: line });
                     }
                     else {
+                        if (!buffer.length && (multiRes = RE_MULTI.exec(line)))
+                            currentCode = parseInt(multiRes[1], 10);
+
                         buffer.push(line);
                     }
 
                 }, this);
             }, stop);
-        }
+        };
     }
 
     var cmds = function(next, stop) {
@@ -155,7 +143,7 @@ var Ftp = module.exports = function (cfg) {
             callback = command[1] ? command[1] : null;
         }
 
-        this._log(cmdName, ftpResponse);
+        this._log(this._sanitize(cmdName), ftpResponse);
 
         if (callback)
             callback(ftpResponse);
@@ -164,6 +152,25 @@ var Ftp = module.exports = function (cfg) {
     this._log = function(cmd, response) {
         console.log("\n" + (cmd || ""), response.text);
     };
+
+    /**
+     * Cleans up commands with potentially insecure data in them, such as
+     * passwords, personal info, etc.
+     *
+     * @param cmd {String} Command to be sanitized
+     * @returns {String} Sanitized command
+     */
+    this._sanitize = function(cmd) {
+        if (!cmd)
+            return;
+
+        var _cmd = cmd.slice(0, 5).toUpperCase();
+        if (_cmd === "PASS ")
+            cmd = _cmd + Array(cmd.length - 5).join("*");
+
+        return cmd;
+    };
+
 
     /*
      * Below this point all the complex/composed actions for FTP.
@@ -178,8 +185,8 @@ var Ftp = module.exports = function (cfg) {
                     else if (res.code === 332)
                         self.raw.acct("noaccount");
                     else
-                        callback(new Error("Login not accepted"))
-                })
+                        callback(new Error("Login not accepted"));
+                });
             } else {
                 callback(new Error("Login not accepted"));
             }
@@ -187,15 +194,16 @@ var Ftp = module.exports = function (cfg) {
     };
 
     this.setPassive = function(mode, callback) {
-        this.pasv(function(res) {
-            if (res.code !== "227")
+        this.raw.pasv(function(res) {
+            console.log("$$$", res)
+            if (res.code !== 227)
                 return; // pasv failed
 
-            var match = RE_PASV.exec(res.line);
+            var match = RE_PASV.exec(res.text);
             if (!match)
                 return; // bad port
 
-            var port = (parseInt(match[1]) & 255) * 256 + (parseInt(match[2]) & 255);
+            var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
             this.dataConn = new ftpPasv(this.host, port, mode, callback);
         });
     };
@@ -216,14 +224,15 @@ var Ftp = module.exports = function (cfg) {
     };
 
     this.list = function(filePath, callback) {
+        var self = this;
         var mode = "A";
-        this.type(mode, function(typeRes) {
-            if (typeRes.code === "250" || typeRes.code === "200") {
-                this.setPassive(mode, callback);
-                this.processCmd("LIST" + (filePath ? " " + filePath : ""));
+        this.raw.type(mode, function(typeRes) {
+            if (typeRes.code === 250 || typeRes.code === 200) {
+                self.setPassive(mode, callback);
+                self.push("LIST" + (filePath ? " " + filePath : ""));
             }
         });
     };
 
-}).call(Ftp.prototype)
+}).call(Ftp.prototype);
 
