@@ -27,8 +27,12 @@ module.exports = {
 
     tearDown: function(next) {
         exec('/bin/launchctl', ['unload', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
-        this.ftp = null;
+        var self = this;
         next();
+        setTimeout(function() {
+            self.ftp = null;
+            next();
+        }, 200);
     },
 
     "test print working directory": function(next) {
