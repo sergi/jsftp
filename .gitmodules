@@ -1,6 +1,3 @@
-[submodule "support/gab"]
-	path = support/gab
-	url = git@github.com:sergi/gab.git
 [submodule "support/sinon"]
 	path = support/sinon
 	url = https://github.com/cjohansen/Sinon.JS.git
