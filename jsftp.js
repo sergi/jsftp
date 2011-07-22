@@ -193,7 +193,7 @@ var Ftp = module.exports = function (cfg) {
         });
     };
 
-    this.setPassive = function(mode, callback) {
+    this.setPassive = function(mode, callback, onConnect) {
         this.raw.pasv(function(err, res) {
             if (err || res.code !== 227)
                 return callback(res.text);
@@ -203,7 +203,7 @@ var Ftp = module.exports = function (cfg) {
                 return callback("PASV: Bad port "); // bad port
 
             var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-            this.dataConn = new ftpPasv(this.host, port, mode, callback);
+            this.dataConn = new ftpPasv(this.host, port, mode, callback, onConnect);
         });
     };
 
@@ -219,8 +219,9 @@ var Ftp = module.exports = function (cfg) {
             if (err || res.code !== 250 || res.code !== 200)
                 return callback(res.text);
 
-            self.setPassive(mode, callback);
-            self.push("RETR" + (filePath ? " " + filePath : ""));
+            self.setPassive(mode, callback, function(socket) {
+                self.push("RETR" + (filePath ? " " + filePath : ""));
+            });
         });
     };
 
@@ -235,6 +236,20 @@ var Ftp = module.exports = function (cfg) {
             self.push("LIST" + (filePath ? " " + filePath : ""));
         });
     };
+
+    this.put = function(filePath, buffer, callback) {
+        var self = this;
+        var mode = "I";
+        this.raw.type(mode, function(err, res) {
+            if (err || (res.code !== 250 && res.code !== 200))
+                return callback(res.text);
+
+            self.setPassive(mode, callback, function(socket) {
+                self.push("STOR " + filePath);
+                socket.end(buffer);
+            });
+        });
+    }
 
 }).call(Ftp.prototype);
 

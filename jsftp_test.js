@@ -11,6 +11,7 @@ var FTPCredentials = {
 };
 
 var CWD = process.cwd();
+console.log("Current working directory is " + CWD + "\n");
 
 // Execution ORDER: test.setUpSuite, setUp, testFn, tearDown, test.tearDownSuite
 module.exports = {
@@ -86,7 +87,6 @@ module.exports = {
 
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(res) {
             ftp.list(CWD, function(err, res){
-                console.log(res)
                 next()
             })
         })
@@ -94,11 +94,10 @@ module.exports = {
 
     "test ftp node stat": function(next) {
         var ftp = this.ftp;
-        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(res) {
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
             ftp.raw.cwd(CWD, function(err, res) {
                 ftp.raw.stat(CWD, function(err, res) {
-                    console.log(res.code)
-                    //if (err) throw err;
+                    assert.ok(!err);
 
                     assert.ok(res.code === 211);
                     next();
@@ -106,6 +105,52 @@ module.exports = {
             });
         });
     },
+
+    "test create and delete a directory": function(next) {
+        var self = this;
+
+        var newDir = CWD + "/ftp_test_dir";
+        var ftp = this.ftp;
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            ftp.raw.mkd(newDir, function(err, res) {
+                assert.ok(!err);
+                assert.ok(res.code === 257);
+
+                ftp.raw.rmd(newDir, function(err, res) {
+                    assert.ok(!err);
+                    next();
+                });
+            });
+        });
+    },
+
+    "test create and delete a file": function(next) {
+        var self = this;
+
+        var filePath = CWD + "/file_ftp_test.txt";
+        var ftp = this.ftp;
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
+                var buffer = new Buffer(data, "binary");
+                ftp.put(filePath, buffer, function(err, res) {
+                    assert.ok(!err, err);
+
+                    ftp.raw.stat(filePath, function(err, res) {
+                        assert.ok(!err);
+
+                        assert.equal(buffer.length, Fs.statSync(filePath).size);
+
+                        ftp.raw.dele(filePath, function(err, data) {
+                            assert.ok(!err);
+
+                            next();
+                        });
+                    });
+                });
+            });
+        });
+    },
+
 
     "test passive retrieving of files": function(next) {
         next()
