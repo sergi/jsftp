@@ -164,7 +164,7 @@ module.exports = {
         var filePath = CWD + "/jsftp_test.js";
         var ftp = this.ftp;
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
-            Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
+            Fs.readFile(filePath, "binary", function(err, data) {
                 var buffer = new Buffer(data, "binary");
                 ftp.get(filePath, function(err, data) {
                     assert.ok(!err, err);
