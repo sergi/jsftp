@@ -28,9 +28,8 @@ var Ftp = module.exports = function (cfg) {
     // Generate generic methods from parameter names. They can easily be
     // overriden if we need special behavior. They accept any parameters given,
     // it is the responsability of the user to validate the parameters.
-    this.raw = {};
-
     var self = this;
+    this.raw = {};
     COMMANDS.forEach(function(cmd) {
         var lcCmd = cmd.toLowerCase();
         self.raw[lcCmd] = function() {
@@ -45,32 +44,36 @@ var Ftp = module.exports = function (cfg) {
                 if (args.length)
                     cmd += " " + args.join(" ");
             }
-
             self.push(cmd, callback);
         };
     });
 
-    // Inizialization of connection and credentials details
-    var port = cfg.port || FTP_PORT;
-    var host = cfg.host;
-    var user = cfg.user;
-    var pass = cfg.pass;
-
-    var socket = this.createSocket(port, host);
+    var socket = this.createSocket(cfg.port || FTP_PORT, cfg.host);
 
     var cmd;
+    /**
+     * Writes a new command to the server, but before that it pushes the
+     * command into `cmds` list. This command will get paired with its response
+     * once that one is received
+     */
     this.push = function(command, callback) {
         cmd([command, callback]);
         socket.write(command + "\r\n");
     };
 
-    // Stream of incoming data.
+    // Stream of incoming data from the FTP server.
     var input = function(next, stop) {
         socket.on("data", next);
         socket.on("end", stop);
         socket.on("error", stop);
     };
 
+    /**
+     * `requests` receives a stream of responses from the server and filters
+     * them before pushing them back into the stream. The filtering is
+     * necessary to detect multiline responses, in which several responses from
+     * the server belong to a single command.
+     */
     function requests(source) {
         var NL = "\n";
         var buffer = [];
@@ -110,10 +113,18 @@ var Ftp = module.exports = function (cfg) {
         };
     }
 
+    /**
+     * Stream of FTP commands from the client.
+     */
     var cmds = function(next, stop) {
         cmd = next;
     };
 
+    /**
+     * Zips (as in array zipping) commands with responses. This creates
+     * a stream that keeps yielding command/response pairs as soon as each pair
+     * becomes available.
+     */
     var tasks = S.zip(requests(input), S.append(S.list(null), cmds));
 
     tasks(this.parse.bind(this), function(){});
@@ -150,9 +161,12 @@ var Ftp = module.exports = function (cfg) {
         this._log(this._sanitize(cmdName), ftpResponse);
 
         if (callback) {
+            // In FTP every response code above 399 means error in some way.
+            // Since the RFC is not respected by many servers, we are goiong to
+            // overgeneralize and consider every value above 399 as an error.
             var hasFailed = ftpResponse && ftpResponse.code > 399;
-            var err = hasFailed ? ftpResponse.text : null;
-            callback(err, ftpResponse);
+            var error = hasFailed ? ftpResponse.text : null;
+            callback(error, ftpResponse);
         }
     };
 
@@ -179,8 +193,15 @@ var Ftp = module.exports = function (cfg) {
     };
 
 
-    /*
-     * Below this point all the complex/composed actions for FTP.
+    // Below this point all the methods are action helpers for FTP that compose
+    // several actions in one command
+
+    /**
+     * Authenticates the user.
+     *
+     * @param user {String} Username
+     * @param pass {String} Password
+     * @param callback {Function} Follow-up function.
      */
     this.auth = function(user, pass, callback) {
         var self = this;
@@ -200,6 +221,15 @@ var Ftp = module.exports = function (cfg) {
         });
     };
 
+    /**
+     * Tells the server to enter passive mode, in which the server returns
+     * a data port where we can listen to passive data. The callback is called
+     * when the passive socket closes its connection.
+     *
+     * @param mode {String} String that specifies binary or non-binary mode ("I or "A")
+     * @param callback {Function} Function to call when socket has received all the data
+     * @param onConnect {Function} Function to call when the passive socket connects
+     */
     this.setPassive = function(mode, callback, onConnect) {
         this.raw.pasv(function(err, res) {
             if (err || res.code !== 227)
@@ -231,6 +261,11 @@ var Ftp = module.exports = function (cfg) {
         });
     };
 
+    /**
+     * Lists a folder's contents using a passive connection.
+     *
+     * @param filePath {String} Remote foldder path
+     */
     this.list = function(filePath, callback) {
         var self = this;
         var mode = "A";
@@ -251,7 +286,7 @@ var Ftp = module.exports = function (cfg) {
                 return callback(res.text);
 
             self.setPassive(mode, callback, function(socket) {
-                self.push("STOR " + filePath);
+                self.raw.stor(filePath);
                 socket.end(buffer);
             });
         });
