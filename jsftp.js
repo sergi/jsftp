@@ -219,16 +219,15 @@ var Ftp = module.exports = function (cfg) {
      * command to retrieve the file. the `get` and `retr` methods are synonymous of
      * this method.
      */
-    this.retrBinary = function(filePath, callback) {
+    this.get = function(filePath, callback) {
         var self = this;
         var mode = "I";
         this.raw.type(mode, function(err, res) {
-            if (err || res.code !== 250 || res.code !== 200)
+            if (err || (res.code !== 250 && res.code !== 200))
                 return callback(res.text);
 
-            self.setPassive(mode, callback, function(socket) {
-                self.push("RETR" + (filePath ? " " + filePath : ""));
-            });
+            self.setPassive(mode, callback);
+            self.push("RETR" + (filePath ? " " + filePath : ""));
         });
     };
 

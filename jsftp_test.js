@@ -44,15 +44,15 @@ module.exports = {
     },
 
     "test print working directory": function(next) {
-        var self = this;
-        this.ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
-            self.ftp.raw.pwd(function(err, res) {
+        var ftp = this.ftp;
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            ftp.raw.pwd(function(err, res) {
                 if (err) throw err;
 
                 var code = parseInt(res.code, 10);
                 assert.ok(code === 257, "PWD command was not successful");
 
-                self.ftp.raw.quit(function(err, res) {
+                ftp.raw.quit(function(err, res) {
                     if (err) throw err;
 
                     next();
@@ -77,7 +77,7 @@ module.exports = {
                     var code = parseInt(res.code, 10);
                     assert.ok(code === 257, "PWD command was not successful");
                     assert.ok(res.text.indexOf(CWD), "Unexpected CWD");
-                })
+                });
 
                 ftp.raw.cwd("/unexistentDir/", function(err, res) {
                     assert.ok(err);
@@ -94,9 +94,9 @@ module.exports = {
 
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(res) {
             ftp.list(CWD, function(err, res){
-                next()
-            })
-        })
+                next();
+            });
+        });
     },
 
     "test ftp node stat": function(next) {
@@ -158,11 +158,28 @@ module.exports = {
         });
     },
 
+    "test get a file": function(next) {
+        var self = this;
 
-    "test passive retrieving of files": function(next) {
-        next()
+        var filePath = CWD + "/jsftp_test.js";
+        var ftp = this.ftp;
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
+                var buffer = new Buffer(data, "binary");
+                ftp.get(filePath, function(err, data) {
+                    assert.ok(!err, err);
+
+                    assert.equal(buffer.length, data.length);
+                    next()
+                });
+            });
+        });
     },
 
+
+    "test passive retrieving of files": function(next) {
+        next();
+    }
 };
 
 !module.parent && require("./support/async/lib/test").testcase(module.exports, "FTP"/*, timeout*/).exec();
