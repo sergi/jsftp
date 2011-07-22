@@ -26,24 +26,21 @@ var Ftp = module.exports = function (cfg) {
     var self = this;
     COMMANDS.forEach(function(cmd) {
         var lcCmd = cmd.toLowerCase();
-        if (!self.raw[lcCmd]) {
-            self.raw[lcCmd] = function() {
-                var fullCmd = cmd;
-                var callback;
+        self.raw[lcCmd] = function() {
+            var callback;
 
-                if (arguments.length) {
-                    var args = Array.prototype.slice.call(arguments);
+            if (arguments.length) {
+                var args = Array.prototype.slice.call(arguments);
 
-                    if (typeof args[args.length - 1] == "function")
-                        callback = args.pop();
+                if (typeof args[args.length - 1] == "function")
+                    callback = args.pop();
 
-                    if (args.length)
-                        fullCmd += " " + args.join(" ");
-                }
+                if (args.length)
+                    cmd += " " + args.join(" ");
+            }
 
-                self.push(fullCmd, callback);
-            };
-        }
+            self.push(cmd, callback);
+        };
     });
 
     // Inizialization of connection and credentials details
@@ -145,12 +142,15 @@ var Ftp = module.exports = function (cfg) {
 
         this._log(this._sanitize(cmdName), ftpResponse);
 
-        if (callback)
-            callback(ftpResponse);
+        if (callback) {
+            var hasFailed = ftpResponse && ftpResponse.code > 399;
+            var err = hasFailed ? ftpResponse.text : null;
+            callback(err, ftpResponse);
+        }
     };
 
     this._log = function(cmd, response) {
-        console.log("\n" + (cmd || ""), response.text);
+        console.log("\n" + (cmd || "") + "\n" + response.text);
     };
 
     /**
@@ -177,11 +177,11 @@ var Ftp = module.exports = function (cfg) {
      */
     this.auth = function(user, pass, callback) {
         var self = this;
-        this.raw.user(user, function(res) {
+        this.raw.user(user, function(err, res) {
             if ([230, 331, 332].indexOf(res.code) > -1) {
-                self.raw.pass(pass, function(res) {
+                self.raw.pass(pass, function(err, res) {
                     if ([230, 202].indexOf(res.code) > -1)
-                        callback(res);
+                        callback(null, res);
                     else if (res.code === 332)
                         self.raw.acct("noaccount");
                     else
@@ -194,14 +194,13 @@ var Ftp = module.exports = function (cfg) {
     };
 
     this.setPassive = function(mode, callback) {
-        this.raw.pasv(function(res) {
-            console.log("$$$", res)
-            if (res.code !== 227)
-                return; // pasv failed
+        this.raw.pasv(function(err, res) {
+            if (err || res.code !== 227)
+                return callback(res.text);
 
             var match = RE_PASV.exec(res.text);
             if (!match)
-                return; // bad port
+                return callback("PASV: Bad port "); // bad port
 
             var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
             this.dataConn = new ftpPasv(this.host, port, mode, callback);
@@ -214,23 +213,26 @@ var Ftp = module.exports = function (cfg) {
      * this method.
      */
     this.retrBinary = function(filePath, callback) {
+        var self = this;
         var mode = "I";
-        this.type(mode, function(res) {
-            if (res.code === "250" || res.code === "200") {
-                this.setPassive(mode, callback);
-                this.processCmd("RETR" + (filePath ? " " + filePath : ""));
-            }
+        this.raw.type(mode, function(err, res) {
+            if (err || res.code !== 250 || res.code !== 200)
+                return callback(res.text);
+
+            self.setPassive(mode, callback);
+            self.push("RETR" + (filePath ? " " + filePath : ""));
         });
     };
 
     this.list = function(filePath, callback) {
         var self = this;
         var mode = "A";
-        this.raw.type(mode, function(typeRes) {
-            if (typeRes.code === 250 || typeRes.code === 200) {
-                self.setPassive(mode, callback);
-                self.push("LIST" + (filePath ? " " + filePath : ""));
-            }
+        this.raw.type(mode, function(err, res) {
+            if (err || res.code !== 250 || res.code !== 200)
+                return callback(res.text);
+
+            self.setPassive(mode, callback);
+            self.push("LIST" + (filePath ? " " + filePath : ""));
         });
     };
 
