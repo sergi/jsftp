@@ -6,7 +6,7 @@
  */
 
 var Net = require("net");
-var S = require("./streamer");
+var S = require("streamer");
 
 var ftpPasv = module.exports = function(host, port, mode, callback, onConnect) {
     this.data = [];

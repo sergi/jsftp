@@ -7,7 +7,7 @@
 
 var Net = require("net");
 var ftpPasv = require("./ftpPasv");
-var S = require("./streamer");
+var S = require("streamer");
 
 var FTP_PORT = 21;
 var RE_PASV = /[-\d]+,[-\d]+,[-\d]+,[-\d]+,([-\d]+),([-\d]+)/;

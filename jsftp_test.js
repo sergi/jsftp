@@ -6,9 +6,9 @@
  */
 
 var assert = require("assert");
-var Ftp = require("./jsftp");
 var Fs = require("fs");
 var exec = require('child_process').spawn;
+var Ftp = require("./jsftp");
 
 var FTPCredentials = {
     host: "localhost",
@@ -182,4 +182,4 @@ module.exports = {
     }
 };
 
-!module.parent && require("./support/async/lib/test").testcase(module.exports, "FTP"/*, timeout*/).exec();
+!module.parent && require("asyncjs").test.testcase(module.exports, "FTP").exec();
