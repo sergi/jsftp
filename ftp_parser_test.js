@@ -1,5 +1,4 @@
 var assert = require("assert");
-var async  = require("./support/async");
 var Parser = require('./ftp_parser');
 
 module.exports = {
@@ -261,5 +260,5 @@ module.exports = {
 */
 }
 
-!module.parent && require("./support/async/lib/test").testcase(module.exports, "FTP Parser").exec();
+!module.parent && require("asyncjs").test.testcase(module.exports, "FTP Parser").exec();
 

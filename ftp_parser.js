@@ -1,6 +1,10 @@
+/**
+ * @package jsFTP
+ * @copyright Copyright(c) 2011 Ajax.org B.V. <info AT ajax DOT org>
+ * @author Sergi Mansilla <sergi DOT mansilla AT gmail DOT com>
+ * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
+ */
 // See RFC at http://www.w3.org/Protocols/rfc959
-
-var _ = require("./support/underscore");
 
 var RE_SERVER_RESPONSE = /^(\d\d\d)(.*)/;
 
@@ -84,6 +88,11 @@ exports.access = {
     WORLD_ACCESS : 2
 };
 
+var compact = function(array) {
+    return array.filter(function(value) { return !!value; });
+};
+
+
 /**
  * Parses standard FTP replies. Please note that this only involves replies in
  * the form of <code> <message>. It doesn't parse file listings or non-standard
@@ -93,11 +102,11 @@ exports.access = {
  * @returns {Array} Processed entries
  */
 exports.parseResponses = function(lines) {
-    if (!_.isArray(lines))
+    if (!Array.isArray(lines))
         throw new TypeError("The parameter should be an Array");
 
     var responses = [];
-    _.compact(lines).map(function(line) {
+    compact(lines).map(function(line) {
             var match = line.match(RE_SERVER_RESPONSE);
             match && (line = [parseInt(match[1], 10), match[2]]);
             return line;
@@ -111,7 +120,7 @@ exports.parseResponses = function(lines) {
             // returning null.
             if (p) {
                 var cIsMultiLine, currentMsg;
-                var cIsArray = _.isArray(c);
+                var cIsArray = Array.isArray(c);
 
                 if (cIsArray) {
                     cIsMultiLine = c[1][0] == "-";
@@ -153,7 +162,7 @@ exports.processDirLines = function(lines, type) {
             if (type === "LIST") {
                 var result = exports.entryParser(line);
                 if (result) {
-                    var t = _.isString(result) ? "raw" : "entry";
+                    var t = typeof result == "string" ? "raw" : "entry";
                     processed.push([t, result, line]);
                 }
             }
