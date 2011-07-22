@@ -1,12 +1,15 @@
 var Net = require("net");
 var S = require("./streamer");
 
-var ftpPasv = module.exports = function(host, port, mode, callback) {
+var ftpPasv = module.exports = function(host, port, mode, callback, onConnect) {
     this.data = [];
     this.mode = mode;
 
     var socket = this.socket = Net.createConnection(port, host);
     socket.setEncoding("utf8");
+
+    if (onConnect)
+        socket.on("connect", function() { onConnect(socket); });
 
     var input = function(next, stop) {
         socket.on("data", next);
