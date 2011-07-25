@@ -106,7 +106,7 @@ Port number for the current FTP server (defaults to 21).
 
 NodeJS socket for the current FTP server.
 
-### Ftp.dataConn
+#### Ftp.dataConn
 
 NodeJS socket for the current passive connection, if any.
 
