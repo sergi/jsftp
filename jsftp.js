@@ -48,7 +48,10 @@ var Ftp = module.exports = function (cfg) {
         };
     });
 
-    var socket = this.createSocket(cfg.port || FTP_PORT, cfg.host);
+    this.host = cfg.host;
+    this.port = cfg.port || FTP_PORT;
+
+    var socket = this.createSocket(this.port, this.host);
     var cmd;
     /**
      * Writes a new command to the server, but before that it pushes the
