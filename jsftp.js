@@ -6,7 +6,7 @@
  */
 
 var Net = require("net");
-var ftpPasv = require("./ftpPasv");
+var ftpPasv = require("./lib/ftpPasv");
 var S = require("streamer");
 
 var FTP_PORT = 21;
@@ -245,23 +245,6 @@ var Ftp = module.exports = function (cfg) {
     };
 
     /**
-     * Downloads a file from FTP server, given a valid Path. It uses the RETR
-     * command to retrieve the file. the `get` and `retr` methods are synonymous of
-     * this method.
-     */
-    this.get = function(filePath, callback) {
-        var self = this;
-        var mode = "I";
-        this.raw.type(mode, function(err, res) {
-            if (err || (res.code !== 250 && res.code !== 200))
-                return callback(res.text);
-
-            self.setPassive(mode, callback);
-            self.push("RETR" + (filePath ? " " + filePath : ""));
-        });
-    };
-
-    /**
      * Lists a folder's contents using a passive connection.
      *
      * @param filePath {String} Remote foldder path
@@ -275,6 +258,23 @@ var Ftp = module.exports = function (cfg) {
 
             self.setPassive(mode, callback);
             self.push("LIST" + (filePath ? " " + filePath : ""));
+        });
+    };
+
+    /**
+     * Downloads a file from FTP server, given a valid Path. It uses the RETR
+     * command to retrieve the file. the `get` and `retr` methods are synonymous of
+     * this method.
+     */
+    this.get = function(filePath, callback) {
+        var self = this;
+        var mode = "I";
+        this.raw.type(mode, function(err, res) {
+            if (err || (res.code !== 250 && res.code !== 200))
+                return callback(res.text);
+
+            self.setPassive(mode, callback);
+            self.push("RETR" + (filePath ? " " + filePath : ""));
         });
     };
 

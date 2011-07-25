@@ -10,11 +10,14 @@ var Fs = require("fs");
 var exec = require('child_process').spawn;
 var Ftp = require("./jsftp");
 
+// Write down your system credentials. This test suite will use OSX internal
+// FTP server. If you want to test against a remote server, simply change the
+// `host` and `port` properties as well.
 var FTPCredentials = {
     host: "localhost",
-    user: "sergi",
+    user: "",
     port: 21,
-    pass: "2x8hebsndr9"
+    pass: ""
 };
 
 var CWD = process.cwd();
@@ -25,7 +28,10 @@ module.exports = {
     timeout: 10000,
 
     setUp: function(next) {
-        exec('/bin/launchctl', ['load', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
+        try {
+            exec('/bin/launchctl', ['load', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
+        } catch(e) {}
+
         var self = this;
         setTimeout(function() {
             self.ftp = new Ftp(FTPCredentials);
@@ -34,7 +40,10 @@ module.exports = {
     },
 
     tearDown: function(next) {
-        exec('/bin/launchctl', ['unload', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
+        try {
+            exec('/bin/launchctl', ['unload', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
+        } catch (e) {}
+
         var self = this;
         next();
         setTimeout(function() {
@@ -175,11 +184,6 @@ module.exports = {
             });
         });
     },
-
-
-    "test passive retrieving of files": function(next) {
-        next();
-    }
 };
 
 !module.parent && require("asyncjs").test.testcase(module.exports, "FTP").exec();

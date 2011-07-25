@@ -8,8 +8,7 @@
   "homepage": "https://github.com/sergi/jsFTP",
   "repository": {
     "type": "git",
-    "url": "",
-    "web": ""
+    "url": "https://github.com/sergi/jsFTP.git",
   },
   "bugs": {
     "web": "https://github.com/sergi/jsFTP/issues"
@@ -22,7 +21,7 @@
   },
   "main": "./jsftp.js",
   "engines": {
-    "node": "0.4.x"
+    "node": ">=0.4.x"
   },
   "scripts": {
     "test": "node jsftp_test.js"
