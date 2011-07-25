@@ -8,6 +8,7 @@
 var Net = require("net");
 var ftpPasv = require("./lib/ftpPasv");
 var S = require("streamer");
+var Parser = require('./lib/ftp_parser');
 
 var FTP_PORT = 21;
 var RE_PASV = /[-\d]+,[-\d]+,[-\d]+,[-\d]+,([-\d]+),([-\d]+)/;
@@ -241,8 +242,6 @@ var Ftp = module.exports = function (cfg) {
             else
                 self.features = self._parseFeats(response.text);
 
-            console.log("FEATS", self.features)
-
             self.raw.user(user, function(err, res) {
                 if ([230, 331, 332].indexOf(res.code) > -1) {
                     self.raw.pass(pass, function(err, res) {
@@ -289,10 +288,15 @@ var Ftp = module.exports = function (cfg) {
      * @param filePath {String} Remote foldder path
      */
     this.list = function(filePath, callback) {
+        if (arguments.length === 1) {
+            callback = arguments[0];
+            filePath = "";
+        }
+
         var self = this;
         var mode = "A";
         this.raw.type(mode, function(err, res) {
-            if (err || res.code !== 250 || res.code !== 200)
+            if (err || (res.code !== 250 && res.code !== 200))
                 return callback(res.text);
 
             self.setPassive(mode, callback);
@@ -330,6 +334,31 @@ var Ftp = module.exports = function (cfg) {
             });
         });
     };
+
+    this.ls = function(filePath, callback) {
+        if (arguments.length === 1) {
+            // The user didn't specify any parameters, let's use LIST without
+            // parameters, since it defaults to the current dir.
+            callback = arguments[0];
+            this.list(entriesToList);
+        }
+        else {
+            this.raw.stat(filePath, function(err, data) {
+                entriesToList(err, data.text);
+            });
+        }
+
+        function entriesToList(err, entries) {
+            if (err)
+                return callback(err);
+
+            callback(null,
+                entries.split(RE_NL).map(function(entry) {
+                    return Parser.entryParser(entry);
+                })
+            );
+        }
+    }
 
 }).call(Ftp.prototype);
 

@@ -183,8 +183,6 @@ module.exports = {
     },
 
     "test get a file": function(next) {
-        var self = this;
-
         var filePath = CWD + "/jsftp_test.js";
         var ftp = this.ftp;
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
@@ -199,6 +197,43 @@ module.exports = {
             });
         });
     },
+
+    "test get fileList array": function(next) {
+        var ftp = this.ftp;
+        var file1 = "jsftp.js";
+
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            ftp.raw.cwd(CWD, function(err, res) {
+                ftp.ls(function(err, res) {
+                    assert.ok(!err);
+
+                    assert.ok(Array.isArray(res));
+
+                    var fileNames = res.map(function(file) {
+                        return file ? file.name : null;
+                    })
+
+                    assert.ok(fileNames.indexOf(file1) > -1);
+
+                    next();
+                });
+            });
+
+            ftp.ls(CWD, function(err, res) {
+                assert.ok(!err);
+
+                assert.ok(Array.isArray(res));
+
+                var fileNames = res.map(function(file) {
+                    return file ? file.name : null;
+                })
+
+                assert.ok(fileNames.indexOf(file1) > -1);
+
+                next();
+            });
+        });
+    }
 };
 
 !module.parent && require("asyncjs").test.testcase(module.exports, "FTP").exec();
