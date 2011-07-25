@@ -90,8 +90,13 @@ var Ftp = module.exports = function (cfg) {
 (function() {
 
     this.createSocket = function(port, host) {
-        this.socket = Net.createConnection(port, host);
-        this.socket.setEncoding("utf8");
+        var socket = this.socket = Net.createConnection(port, host);
+        socket.setEncoding("utf8");
+        socket.setTimeout(60000, function() {
+            socket.destroy();
+            throw new Error("FTP socket timeout");
+        });
+
         return this.socket;
     };
 
