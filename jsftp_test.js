@@ -52,6 +52,21 @@ module.exports = {
         }, 200);
     },
 
+    "test features command": function(next) {
+        var ftp = this.ftp;
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            assert.ok(!err);
+
+            assert.ok(Array.isArray(ftp.features));
+
+            if (ftp.features.length) {
+                var feat = ftp.features[0];
+                assert.ok(ftp.hasFeat(feat));
+            }
+            next();
+        });
+    },
+
     "test print working directory": function(next) {
         var ftp = this.ftp;
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {

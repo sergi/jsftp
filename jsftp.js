@@ -18,7 +18,7 @@ var RE_NL = /\r\n/;
 
 var COMMANDS = [
     // Commands without parameters
-    "ABOR", "PWD", "CDUP", "NOOP", "QUIT", "PASV", "SYST",
+    "ABOR", "PWD", "CDUP", "FEAT", "NOOP", "QUIT", "PASV", "SYST",
     // Commands with one or more parameters
     "CWD", "DELE", "LIST", "MDTM", "MKD", "MODE", "NLST", "PASS", "RETR", "RMD",
     "RNFR", "RNTO", "SITE", "STAT", "STOR", "TYPE", "USER", "PASS"
@@ -49,7 +49,6 @@ var Ftp = module.exports = function (cfg) {
     });
 
     var socket = this.createSocket(cfg.port || FTP_PORT, cfg.host);
-
     var cmd;
     /**
      * Writes a new command to the server, but before that it pushes the
@@ -69,12 +68,37 @@ var Ftp = module.exports = function (cfg) {
     };
 
     /**
+     * Stream of FTP commands from the client.
+     */
+    var cmds = function(next, stop) {
+        cmd = next;
+    };
+
+    /**
+     * Zips (as in array zipping) commands with responses. This creates
+     * a stream that keeps yielding command/response pairs as soon as each pair
+     * becomes available.
+     */
+    var tasks = S.zip(this.serverResponse(input), S.append(S.list(null), cmds));
+
+    tasks(this.parse.bind(this), function(){});
+};
+
+(function() {
+
+    this.createSocket = function(port, host) {
+        this.socket = Net.createConnection(port, host);
+        this.socket.setEncoding("utf8");
+        return this.socket;
+    };
+
+    /**
      * `requests` receives a stream of responses from the server and filters
      * them before pushing them back into the stream. The filtering is
      * necessary to detect multiline responses, in which several responses from
      * the server belong to a single command.
      */
-    function requests(source) {
+    this.serverResponse = function requests(source) {
         var NL = "\n";
         var buffer = [];
         var currentCode = 0;
@@ -111,31 +135,6 @@ var Ftp = module.exports = function (cfg) {
                 }, this);
             }, stop);
         };
-    }
-
-    /**
-     * Stream of FTP commands from the client.
-     */
-    var cmds = function(next, stop) {
-        cmd = next;
-    };
-
-    /**
-     * Zips (as in array zipping) commands with responses. This creates
-     * a stream that keeps yielding command/response pairs as soon as each pair
-     * becomes available.
-     */
-    var tasks = S.zip(requests(input), S.append(S.list(null), cmds));
-
-    tasks(this.parse.bind(this), function(){});
-};
-
-(function() {
-
-    this.createSocket = function(port, host) {
-        this.socket = Net.createConnection(port, host);
-        this.socket.setEncoding("utf8");
-        return this.socket;
     };
 
     /**
@@ -192,6 +191,29 @@ var Ftp = module.exports = function (cfg) {
         return cmd;
     };
 
+    this.hasFeat = function(feature) {
+        feature = feature.toLowerCase();
+        return this.features && (this.features.indexOf(feature) > -1);
+    };
+
+    /**
+     * Returns an array of features supported by the current FTP server
+     *
+     * @param {String} Server response for the 'FEAT' command
+     * @returns {Array} Array of feature names
+     */
+    this._parseFeats = function(featResult) {
+        var features = featResult.split(RE_NL);
+        if (features.length) {
+            // Ignore header and footer
+            features = features.slice(1, -1).map(function(feature) {
+                return /^\s*(\w*)\s*/.exec(feature)[1].trim().toLowerCase();
+            });
+        }
+
+        return features;
+    };
+
 
     // Below this point all the methods are action helpers for FTP that compose
     // several actions in one command
@@ -205,19 +227,28 @@ var Ftp = module.exports = function (cfg) {
      */
     this.auth = function(user, pass, callback) {
         var self = this;
-        this.raw.user(user, function(err, res) {
-            if ([230, 331, 332].indexOf(res.code) > -1) {
-                self.raw.pass(pass, function(err, res) {
-                    if ([230, 202].indexOf(res.code) > -1)
-                        callback(null, res);
-                    else if (res.code === 332)
-                        self.raw.acct("noaccount");
-                    else
-                        callback(new Error("Login not accepted"));
-                });
-            } else {
-                callback(new Error("Login not accepted"));
-            }
+        this.raw.feat(function(err, response) {
+            if (err)
+                self.features = [];
+            else
+                self.features = self._parseFeats(response.text);
+
+            console.log("FEATS", self.features)
+
+            self.raw.user(user, function(err, res) {
+                if ([230, 331, 332].indexOf(res.code) > -1) {
+                    self.raw.pass(pass, function(err, res) {
+                        if ([230, 202].indexOf(res.code) > -1)
+                            callback(null, res);
+                        else if (res.code === 332)
+                            self.raw.acct("noaccount");
+                        else
+                            callback(new Error("Login not accepted"));
+                    });
+                } else {
+                    callback(new Error("Login not accepted"));
+                }
+            });
         });
     };
 
