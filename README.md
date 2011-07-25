@@ -91,10 +91,12 @@ Installation
 ------------
 
 With NPM:
-`npm install jsftp`
+
+    npm install jsftp
 
 From GitHub:
-`git clone https://github.com/sergi/jsFTP.git`
+
+    git clone https://github.com/sergi/jsFTP.git
 
 License
 -------

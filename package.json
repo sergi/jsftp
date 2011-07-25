@@ -1,5 +1,5 @@
 {
-  "name": "jsFTP",
+  "name": "jsftp",
   "id": "jsftp",
   "version": "0.0.1",
   "description": "A sane FTP client implementation for NodeJS",
