@@ -29,63 +29,91 @@ and a command like `MKD`, which accepts parameters will look like
 Usage examples
 --------------
 
-    // Initialize some common variables
-    var user = "johndoe";
-    var pass = "12345"
+```javascript
+// Initialize some common variables
+var user = "johndoe";
+var pass = "12345"
 
-    var ftp = new Ftp({
-        host: "myhost.com",
-        port: 21, // The port defaults to 21, but let's include it anyway.
-    });
+var ftp = new Ftp({
+    host: "myhost.com",
+    port: 21, // The port defaults to 21, but let's include it anyway.
+});
 
 
-    // First, we authenticate the user
-    ftp.auth(user, pass, function(err, res) {
+// First, we authenticate the user
+ftp.auth(user, pass, function(err, res) {
+    if (err) throw err;
+
+    // Retrieve a file in the remote server. When the file has been retrieved,
+    // the callback will be called with `data` being the Buffer with the
+    // contents of the file.
+
+    // This is a convenience method that hides the actual complexity of setting
+    // up passive mode and retrieving files.
+
+    ftp.get("/folder/file.ext", function(err, data) {
         if (err) throw err;
 
-        // Retrieve a file in the remote server. When the file has been retrieved,
-        // the callback will be called with `data` being the Buffer with the
-        // contents of the file.
+        // Do something with the buffer
+        doSomething(data);
 
-        // This is a convenience method that hides the actual complexity of setting
-        // up passive mode and retrieving files.
-
-        ftp.get("/folder/file.ext", function(err, data) {
+        // We can use raw FTP commands directly as well. In this case we use FTP
+        // 'QUIT' method, which accepts no parameters and returns the farewell
+        // message from the server
+        ftp.raw.quit(function(err, res) {
             if (err) throw err;
 
-            // Do something with the buffer
-            doSomething(data);
-
-            // We can use raw FTP commands directly as well. In this case we use FTP
-            // 'QUIT' method, which accepts no parameters and returns the farewell
-            // message from the server
-            ftp.raw.quit(function(err, res) {
-                if (err) throw err;
-
-                console.log("FTP session finalized! See you soon!");
-            });
+            console.log("FTP session finalized! See you soon!");
         });
     });
+});
 
-    // The following code assumes that you have authenticated the user, just like
-    // I did in the code above.
+// The following code assumes that you have authenticated the user, just like
+// I did in the code above.
 
-    // Create a directory
-    ftp.raw.mkd("/example_dir", function(err, res) {
-        if (err) throw err;
+// Create a directory
+ftp.raw.mkd("/example_dir", function(err, res) {
+    if (err) throw err;
 
-        console.log(data.text);
-    });
+    console.log(data.text);
+});
 
-    // Delete a directory
-    ftp.raw.rmd("/example_dir", function(err, res) {
-        if (err) throw err;
+// Delete a directory
+ftp.raw.rmd("/example_dir", function(err, res) {
+    if (err) throw err;
 
-        console.log(data.text);
-    });
+    console.log(data.text);
+});
+```
 
 You can find more usage examples in the unit tests for it. This documentation
 will grow as jsFTP evolves, I promise!
+
+API
+---
+
+### Properties
+
+#### Ftp.host
+
+Host name for the current FTP server.
+
+#### Ftp.port
+
+Port number for the current FTP server (defaults to 21).
+
+#### Ftp.socket
+
+NodeJS socket for the current FTP server.
+
+### Ftp.dataConn
+
+NodeJS socket for the current passive connection, if any.
+
+#### Ftp.features
+
+`features` is an array of feature names for the current FTP server. It is
+generated when the user authenticates with the `auth` method.
 
 Installation
 ------------
