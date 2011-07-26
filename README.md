@@ -1,29 +1,33 @@
-jsFTP
+jsftp
 =====
 
-jsFTP is a client FTP module for NodeJS that focuses on correctness, clarity and conciseness. It doesn't get in the middle of the user intentions.
+jsftp is a client FTP module for NodeJS that focuses on correctness, clarity and conciseness. It doesn't get in the middle of the user intentions.
 
-jsFTP gives the user access to all the raw commands of FTP in form of methods in the `Ftp` object. It also provides several convenience methods for actions that require complex chains of commands (e.g. uploading and retrieving files). When commands succeed they always pass the response of the FTP server to the callback, in the form of an object that contains two properties: `code`, which is the response code of the FTP operation, and `text`, which is the complete text of the response.
+jsftp gives the user access to all the raw commands of FTP in form of methods in the `Ftp` object. It also provides several convenience methods for actions that require complex chains of commands (e.g. uploading and retrieving files). When commands succeed they always pass the response of the server to the callback, in the form of an object that contains two properties: `code`, which is the response code of the FTP operation, and `text`, which is the complete text of the response.
 
-FTP raw (or native) commands are accessible in the form `Ftp.raw["desired_command"](params, callback)`
+Raw (or native) commands are accessible in the form `Ftp.raw["desired_command"](params, callback)`
 
 Thus, a command like `QUIT` will be called like
 
-    Ftp.raw.quit(function(err, data) {
-        if (err)
-            throw err;
+```javascript
+Ftp.raw.quit(function(err, data) {
+    if (err)
+        throw err;
 
-        console.log("Bye!");
-    });
+    console.log("Bye!");
+});
+```
 
-and a command like `MKD`, which accepts parameters will look like
+and a command like `MKD`, which accepts parameters, will look like
 
-    Ftp.raw.mkd("/new_dir", function(err, data) {
-        if (err)
-            throw err;
+```javascript
+Ftp.raw.mkd("/new_dir", function(err, data) {
+    if (err)
+        throw err;
 
-        console.log(data.text); // Presenting the FTP response text to the user
-    });
+    console.log(data.text); // Presenting the FTP response text to the user
+});
+```
 
 
 Usage examples
@@ -73,21 +77,23 @@ ftp.auth(user, pass, function(err, res) {
 
 // Create a directory
 ftp.raw.mkd("/example_dir", function(err, res) {
-    if (err) throw err;
+    if (err)
+        throw err;
 
     console.log(data.text);
 });
 
 // Delete a directory
 ftp.raw.rmd("/example_dir", function(err, res) {
-    if (err) throw err;
+    if (err)
+        throw err;
 
     console.log(data.text);
 });
 ```
 
 You can find more usage examples in the unit tests for it. This documentation
-will grow as jsFTP evolves, I promise!
+will grow as jsftp evolves, I promise!
 
 API
 ---
@@ -124,7 +130,7 @@ With NPM:
 
 From GitHub:
 
-    git clone https://github.com/sergi/jsFTP.git
+    git clone https://github.com/sergi/jsftp.git
 
 License
 -------
