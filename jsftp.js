@@ -17,12 +17,15 @@ var RE_MULTI = /^(\d\d\d)-/;
 var RE_NL_END = /\r\n$/;
 var RE_NL = /\r\n/;
 
+var TIMEOUT = 60000;
 var COMMANDS = [
     // Commands without parameters
     "ABOR", "PWD", "CDUP", "FEAT", "NOOP", "QUIT", "PASV", "SYST",
     // Commands with one or more parameters
     "CWD", "DELE", "LIST", "MDTM", "MKD", "MODE", "NLST", "PASS", "RETR", "RMD",
-    "RNFR", "RNTO", "SITE", "STAT", "STOR", "TYPE", "USER", "PASS"
+    "RNFR", "RNTO", "SITE", "STAT", "STOR", "TYPE", "USER", "PASS",
+    // Extended features
+    "SYST", "CHMOD", "SIZE"
 ];
 
 var Ftp = module.exports = function (cfg) {
@@ -93,7 +96,7 @@ var Ftp = module.exports = function (cfg) {
     this.createSocket = function(port, host) {
         var socket = this.socket = Net.createConnection(port, host);
         socket.setEncoding("utf8");
-        socket.setTimeout(60000, function() {
+        socket.setTimeout(TIMEOUT, function() {
             socket.destroy();
             throw new Error("FTP socket timeout");
         });
@@ -176,6 +179,17 @@ var Ftp = module.exports = function (cfg) {
             var error = hasFailed ? ftpResponse.text : null;
             callback(error, ftpResponse);
         }
+    };
+
+    this._initialize = function(callback) {
+        this.raw.feat(function(err, response) {
+            if (err)
+                self.features = [];
+            else
+                self.features = self._parseFeats(response.text);
+
+        });
+
     };
 
     this._log = function(cmd, response) {
