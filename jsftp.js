@@ -18,6 +18,7 @@ var RE_NL_END = /\r\n$/;
 var RE_NL = /\r\n/;
 
 var TIMEOUT = 60000;
+var IDLE_TIME = 30000;
 var COMMANDS = [
     // Commands without parameters
     "ABOR", "PWD", "CDUP", "FEAT", "NOOP", "QUIT", "PASV", "SYST",
@@ -48,6 +49,8 @@ var Ftp = module.exports = function (cfg) {
                 if (args.length)
                     cmd += " " + args.join(" ");
             }
+            self.keepAlive();
+
             self.push(cmd, callback);
         };
     });
@@ -96,8 +99,9 @@ var Ftp = module.exports = function (cfg) {
     this.createSocket = function(port, host) {
         var socket = this.socket = Net.createConnection(port, host);
         socket.setEncoding("utf8");
+        var self = this;
         socket.setTimeout(TIMEOUT, function() {
-            socket.destroy();
+            self.destroy();
             throw new Error("FTP socket timeout");
         });
 
@@ -182,14 +186,17 @@ var Ftp = module.exports = function (cfg) {
     };
 
     this._initialize = function(callback) {
+        var self = this;
         this.raw.feat(function(err, response) {
             if (err)
                 self.features = [];
             else
                 self.features = self._parseFeats(response.text);
 
-        });
+            self.keepAlive();
 
+            callback();
+        });
     };
 
     this._log = function(cmd, response) {
@@ -232,9 +239,24 @@ var Ftp = module.exports = function (cfg) {
             features = features.slice(1, -1).map(function(feature) {
                 return /^\s*(\w*)\s*/.exec(feature)[1].trim().toLowerCase();
             });
+
         }
 
         return features;
+    };
+
+    this.destroy = function() {
+        if (this._keepAliveInterval)
+            clearInterval(this._keepAliveInterval);
+
+        this.socket.destroy();
+
+        if (this.dataConn)
+            this.dataConn.destroy();
+
+        this.features = null;
+        this.user = null;
+        this.password = null;
     };
 
 
@@ -249,22 +271,23 @@ var Ftp = module.exports = function (cfg) {
      * @param callback {Function} Follow-up function.
      */
     this.auth = function(user, pass, callback) {
-        var self = this;
-        this.raw.feat(function(err, response) {
-            if (err)
-                self.features = [];
-            else
-                self.features = self._parseFeats(response.text);
+        if (!user) user = "anonymous";
+        if (!pass) pass = "@anonymous";
 
+        var self = this;
+        this._initialize(function() {
             self.raw.user(user, function(err, res) {
                 if ([230, 331, 332].indexOf(res.code) > -1) {
                     self.raw.pass(pass, function(err, res) {
-                        if ([230, 202].indexOf(res.code) > -1)
+                        if ([230, 202].indexOf(res.code) > -1) {
                             callback(null, res);
-                        else if (res.code === 332)
+                        }
+                        else if (res.code === 332) {
                             self.raw.acct("noaccount");
-                        else
+                        }
+                        else {
                             callback(new Error("Login not accepted"));
+                        }
                     });
                 } else {
                     callback(new Error("Login not accepted"));
@@ -372,7 +395,15 @@ var Ftp = module.exports = function (cfg) {
                 })
             );
         }
-    }
+    };
+
+    this.keepAlive = function() {
+        if (this._keepAliveInterval)
+            clearInterval(this._keepAliveInterval);
+
+        var self = this;
+        this._keepAliveInterval = setInterval(self.raw.noop, IDLE_TIME);
+    };
 
 }).call(Ftp.prototype);
 
