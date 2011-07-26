@@ -95,6 +95,7 @@ ftp.raw.rmd("/example_dir", function(err, res) {
 You can find more usage examples in the unit tests for it. This documentation
 will grow as jsftp evolves, I promise!
 
+
 API
 ---
 
@@ -121,6 +122,30 @@ NodeJS socket for the current passive connection, if any.
 `features` is an array of feature names for the current FTP server. It is
 generated when the user authenticates with the `auth` method.
 
+
+### Methods
+
+### Ftp.auth(username, password, callback)
+Authenticates the user with the given username and password. If null or empty
+values are passed for those, `auth` will use anonymous credentials. `callback`
+will be called with the response text in case of successful login or with an
+error as a first parameter, in normal Node fashion.
+
+### Ftp.list(filePath, callback)
+Lists `filePath` contents using a passive connection.
+
+### Ftp.get(filePath, callback)
+Downloads `filePath` from the server.
+
+### Ftp.put(filePath, buffer, callback)
+Uploads a file to `filePath`. It accepts a `buffer` parameter that will be
+written in the remote file.
+
+### Ftp.keepAlive()
+Refreshes the interval thats keep the server connection active. There is no
+need to call this method since it is taken care internally
+
+
 Installation
 ------------
 
@@ -131,6 +156,28 @@ With NPM:
 From GitHub:
 
     git clone https://github.com/sergi/jsftp.git
+
+
+Tests
+-----
+
+The test script fires up by default the FTP server that comes with OSX. You
+will have to put your OSX user credentials in `jsftp_test.js` if you want to
+run it. If you are not on OSX, feel free to change the FTP host, port and
+credentials to point to a remote server.
+
+To run the tests in the command line:
+
+    node jsftp_test.js
+
+If tests are failing it might be that your user doesn't have enough rights to
+run the FTP service. In that case you should run the tests as `sudo`:
+
+    sudo node jsftp_test.js
+
+Please note that running scripts as sudo is dangerous and you will grant the
+script to do anything in your server. You should do it at your own risk.
+
 
 License
 -------

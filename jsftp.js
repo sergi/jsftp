@@ -58,7 +58,7 @@ var Ftp = module.exports = function (cfg) {
     this.host = cfg.host;
     this.port = cfg.port || FTP_PORT;
 
-    var socket = this.createSocket(this.port, this.host);
+    var socket = this._createSocket(this.port, this.host);
     var cmd;
     /**
      * Writes a new command to the server, but before that it pushes the
@@ -96,7 +96,7 @@ var Ftp = module.exports = function (cfg) {
 
 (function() {
 
-    this.createSocket = function(port, host) {
+    this._createSocket = function(port, host) {
         var socket = this.socket = Net.createConnection(port, host);
         socket.setEncoding("utf8");
         var self = this;
@@ -322,7 +322,7 @@ var Ftp = module.exports = function (cfg) {
     /**
      * Lists a folder's contents using a passive connection.
      *
-     * @param filePath {String} Remote foldder path
+     * @param filePath {String} Remote file/folder path
      */
     this.list = function(filePath, callback) {
         if (arguments.length === 1) {
