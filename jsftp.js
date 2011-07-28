@@ -29,7 +29,19 @@ var COMMANDS = [
     "SYST", "CHMOD", "SIZE"
 ];
 
+// This array contains the codes for special commands, such as RETR or STOR,
+// which send two responses instead of one. Not a multiline response, but
+// literally two.
+var SPECIAL_CMDS = [150];
+
 var Ftp = module.exports = function (cfg) {
+
+    if (cfg.onError)
+        this.onError = cfg.onError;
+
+    if (cfg.onTimeout)
+        this.onTimeout = cfg.onTimeout;
+
     // Generate generic methods from parameter names. They can easily be
     // overriden if we need special behavior. They accept any parameters given,
     // it is the responsability of the user to validate the parameters.
@@ -91,7 +103,14 @@ var Ftp = module.exports = function (cfg) {
      */
     var tasks = S.zip(this.serverResponse(input), S.append(S.list(null), cmds));
 
-    tasks(this.parse.bind(this), function(){});
+    tasks(this.parse.bind(this), function(err) {
+        if (err && self.onError)
+            self.onError(err);
+
+        self.destroy();
+    });
+
+    this.cmd = cmd;
 };
 
 (function() {
@@ -99,10 +118,17 @@ var Ftp = module.exports = function (cfg) {
     this._createSocket = function(port, host) {
         var socket = this.socket = Net.createConnection(port, host);
         socket.setEncoding("utf8");
-        var self = this;
+        //var self = this;
         socket.setTimeout(TIMEOUT, function() {
+            if (this.onTimeout)
+                this.onTimeout(new Error("FTP socket timeout"));
+
             self.destroy();
-            throw new Error("FTP socket timeout");
+        }.bind(this));
+
+        socket.on("connect", function() {
+            if (this.onConnect)
+                this.onConnect();
         });
 
         return this.socket;
@@ -118,6 +144,7 @@ var Ftp = module.exports = function (cfg) {
         var NL = "\n";
         var buffer = [];
         var currentCode = 0;
+        var self = this;
 
         return function stream(next, stop) {
             source(function(data) {
@@ -138,6 +165,13 @@ var Ftp = module.exports = function (cfg) {
                                 currentCode = 0;
                             }
                         }
+
+                        // If the response code belongs to one of the 'special'
+                        // commands (see above), insert a dummy command to pair
+                        // it up properly with its response, and avoid messing
+                        // up the zipped streams.
+                        if (SPECIAL_CMDS.indexOf(code) > -1)
+                            self.cmd(null)
 
                         next({ code: code, text: line });
                     }
@@ -166,6 +200,9 @@ var Ftp = module.exports = function (cfg) {
     this.parse = function(action) {
         var ftpResponse = action[0];
         var command     = action[1];
+
+        if (!command)
+            return;
 
         var cmdName, callback;
         if (command) {
@@ -366,8 +403,12 @@ var Ftp = module.exports = function (cfg) {
                 return callback(res.text);
 
             self.setPassive(mode, callback, function(socket) {
-                self.raw.stor(filePath);
-                socket.end(buffer);
+                self.raw.stor(filePath, function(err, res) {
+                    if (err)
+                        callback(err);
+
+                    socket.end(buffer);
+                });
             });
         });
     };
@@ -396,6 +437,16 @@ var Ftp = module.exports = function (cfg) {
             );
         }
     };
+
+    this.rename = function(from, to, callback) {
+        var raw = this.raw;
+        raw.rnfr(from, function(err, res) {
+            if (err)
+                callback(err);
+
+            raw.rnto(to, function(err, res) { callback(err, res) });
+        });
+    }
 
     this.keepAlive = function() {
         if (this._keepAliveInterval)

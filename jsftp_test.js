@@ -182,6 +182,34 @@ module.exports = {
         });
     },
 
+    "test rename a file": function(next) {
+        var self = this;
+
+        var from = CWD + "/file_ftp_test.txt";
+        var to = CWD + "/file_ftp_test_renamed.txt";
+        var ftp = this.ftp;
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
+                var buffer = new Buffer(data, "binary");
+                ftp.put(from, buffer, function(err, res) {
+                    assert.ok(!err, err);
+
+                    ftp.rename(from, to, function(err, res) {
+                        ftp.raw.stat(to, function(err, res) {
+                            assert.ok(!err);
+                            assert.equal(buffer.length, Fs.statSync(to).size);
+
+                            ftp.raw.dele(to, function(err, data) {
+                                assert.ok(!err);
+                                next();
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    },
+
     "test get a file": function(next) {
         var filePath = CWD + "/jsftp_test.js";
         var ftp = this.ftp;
