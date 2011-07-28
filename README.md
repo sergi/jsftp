@@ -125,7 +125,7 @@ generated when the user authenticates with the `auth` method.
 
 ### Methods
 
-### Ftp[FTP_COMMAND]([params], callback)
+### Ftp.raw.FTP_COMMAND([params], callback)
 All the standard FTP commands are available under the `raw` namespace. These
 commands might accept parameters or not, but they always accept a callback
 with the signature `err, data`, in which `err` is the error response coming
