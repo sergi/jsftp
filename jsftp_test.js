@@ -51,7 +51,6 @@ module.exports = {
             next();
         }, 200);
     },
-
     "test features command": function(next) {
         var ftp = this.ftp;
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
