@@ -125,7 +125,7 @@ generated when the user authenticates with the `auth` method.
 
 ### Methods
 
-### Ftp.raw.FTP_COMMAND([params], callback)
+#### Ftp.raw.FTP_COMMAND([params], callback)
 All the standard FTP commands are available under the `raw` namespace. These
 commands might accept parameters or not, but they always accept a callback
 with the signature `err, data`, in which `err` is the error response coming
@@ -133,26 +133,26 @@ from the server (usually a 4xx or 5xx error code) and the data is an object
 that contains two properties: `code` and `text`. `code` is an integer indicating
 the response code of the response and `text` is the response stgring itself.
 
-### Ftp.auth(username, password, callback)
+#### Ftp.auth(username, password, callback)
 Authenticates the user with the given username and password. If null or empty
 values are passed for those, `auth` will use anonymous credentials. `callback`
 will be called with the response text in case of successful login or with an
 error as a first parameter, in normal Node fashion.
 
-### Ftp.list(filePath, callback)
+#### Ftp.list(filePath, callback)
 Lists `filePath` contents using a passive connection.
 
-### Ftp.get(filePath, callback)
+#### Ftp.get(filePath, callback)
 Downloads `filePath` from the server.
 
-### Ftp.put(filePath, buffer, callback)
+#### Ftp.put(filePath, buffer, callback)
 Uploads a file to `filePath`. It accepts a `buffer` parameter that will be
 written in the remote file.
 
-### Ftp.rename(from, to, callback)
+#### Ftp.rename(from, to, callback)
 Renames a file in the server. `from` and `to` are both filepaths.
 
-### Ftp.keepAlive()
+#### Ftp.keepAlive()
 Refreshes the interval thats keep the server connection active. There is no
 need to call this method since it is taken care internally
 

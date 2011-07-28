@@ -7,7 +7,10 @@
 
 var Net = require("net");
 var ftpPasv = require("./lib/ftpPasv");
-var S = require("streamer");
+var S;
+try { S = require("streamer"); }
+catch (e) { S = require("./support/streamer"); }
+
 var Parser = require('./lib/ftp_parser');
 
 var FTP_PORT = 21;
@@ -34,13 +37,15 @@ var COMMANDS = [
 // literally two.
 var SPECIAL_CMDS = [150];
 
-var Ftp = module.exports = function (cfg) {
-
+var Ftp = module.exports = function(cfg) {
     if (cfg.onError)
         this.onError = cfg.onError;
 
     if (cfg.onTimeout)
         this.onTimeout = cfg.onTimeout;
+
+    if (cfg.onConnect)
+        this.onConnect = cfg.onConnect;
 
     // Generate generic methods from parameter names. They can easily be
     // overriden if we need special behavior. They accept any parameters given,
@@ -84,6 +89,7 @@ var Ftp = module.exports = function (cfg) {
 
     // Stream of incoming data from the FTP server.
     var input = function(next, stop) {
+        socket.on("connect", self.onConnect || function(){});
         socket.on("data", next);
         socket.on("end", stop);
         socket.on("error", stop);
