@@ -129,7 +129,7 @@ var Ftp = module.exports = function(cfg) {
             if (this.onTimeout)
                 this.onTimeout(new Error("FTP socket timeout"));
 
-            self.destroy();
+            this.destroy();
         }.bind(this));
 
         socket.on("connect", function() {
