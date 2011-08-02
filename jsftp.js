@@ -108,7 +108,6 @@ var Ftp = module.exports = function(cfg) {
      * becomes available.
      */
     var tasks = S.zip(this.serverResponse(input), S.append(S.list(null), cmds));
-
     tasks(this.parse.bind(this), function(err) {
         if (err && self.onError)
             self.onError(err);
@@ -419,6 +418,33 @@ var Ftp = module.exports = function(cfg) {
         });
     };
 
+    /**
+     * Provides information about files. It lists a directory contents or
+     * a single file and yields an array of file objects. The file objects
+     * contain several properties. The main difference between this method and
+     * 'list' or 'stat' is that it returns objects with the file properties
+     * already parsed.
+     *
+     * Example of file object:
+     *
+     *  {
+     *      name: 'README.txt',
+     *      type: 0,
+     *      time: 996052680000,
+     *      size: '2582',
+     *      owner: 'sergi',
+     *      group: 'staff',
+     *      userPermissions: { read: true, write: true, exec: false },
+     *      groupPermissions: { read: true, write: false, exec: false },
+     *      otherPermissions: { read: true, write: false, exec: false }
+     *  }
+     *
+     * The constants used in the object are defined in ftp_parser.js
+     *
+     * @param filePath {String} Path to the file or directory to list
+     * @param callback {Function} Function to call with the proper data when
+     * the listing is finished.
+     */
     this.ls = function(filePath, callback) {
         if (arguments.length === 1) {
             // The user didn't specify any parameters, let's use LIST without
