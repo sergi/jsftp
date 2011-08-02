@@ -152,6 +152,9 @@ written in the remote file.
 #### Ftp.rename(from, to, callback)
 Renames a file in the server. `from` and `to` are both filepaths.
 
+#### Ftp.ls(filePath, callback)
+Lists information about files or directories and yields an array of file objects with parsed file properties to the callback. You should use this function instead of `stat` or `list` in case you need to do something with the individual files properties.
+
 #### Ftp.keepAlive()
 Refreshes the interval thats keep the server connection active. There is no
 need to call this method since it is taken care internally
