@@ -348,6 +348,7 @@ var Ftp = module.exports = function(cfg) {
      * @param onConnect {Function} Function to call when the passive socket connects
      */
     this.setPassive = function(mode, callback, onConnect) {
+        var self = this;
         this.raw.pasv(function(err, res) {
             if (err || res.code !== 227)
                 return callback(res.text);
@@ -357,7 +358,7 @@ var Ftp = module.exports = function(cfg) {
                 return callback("PASV: Bad port "); // bad port
 
             var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-            this.dataConn = new ftpPasv(this.host, port, mode, callback, onConnect);
+            this.dataConn = new ftpPasv(self.host, port, mode, callback, onConnect);
         });
     };
 
@@ -463,7 +464,7 @@ var Ftp = module.exports = function(cfg) {
                 return callback(err);
 
             callback(null,
-                entries.split(RE_NL).map(function(entry) {
+                entries.split(/\r\n|\n/).map(function(entry) {
                     return Parser.entryParser(entry);
                 })
             );
@@ -489,4 +490,5 @@ var Ftp = module.exports = function(cfg) {
     };
 
 }).call(Ftp.prototype);
+
 
