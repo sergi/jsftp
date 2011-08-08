@@ -67,7 +67,6 @@ var Ftp = module.exports = function(cfg) {
                     cmd += " " + args.join(" ");
             }
             self.keepAlive();
-
             self.push(cmd, callback);
         };
     });
@@ -83,8 +82,23 @@ var Ftp = module.exports = function(cfg) {
      * once that one is received
      */
     this.push = function(command, callback) {
-        cmd([command, callback]);
-        socket.write(command + "\r\n");
+        function send() {
+            cmd([command, callback]);
+            socket.write(command + "\r\n");
+        }
+
+        if (socket.writable) {
+            send();
+        }
+        else {
+            socket.destroy();
+            console.log("Reopening socket...")
+            socket = this._createSocket(this.port, this.host, function() {
+                createStreams();
+                send()
+                //self.auth(self.currentUser, self.currentPass, send);
+            });
+        }
     };
 
     // Stream of incoming data from the FTP server.
@@ -93,37 +107,43 @@ var Ftp = module.exports = function(cfg) {
         socket.on("data", next);
         socket.on("end", stop);
         socket.on("error", stop);
+        socket.on("close", stop);
     };
 
-    /**
-     * Stream of FTP commands from the client.
-     */
-    var cmds = function(next, stop) {
-        cmd = next;
+    var cmds, tasks;
+    var createStreams = function() {
+        // Stream of FTP commands from the client.
+        cmds = function(next, stop) {
+            cmd = next;
+        };
+
+        /**
+         * Zips (as in array zipping) commands with responses. This creates
+         * a stream that keeps yielding command/response pairs as soon as each pair
+         * becomes available.
+         */
+        tasks = S.zip(self.serverResponse(input), S.append(S.list(null), cmds));
+        tasks(self.parse.bind(self), function(err) {
+            console.log("Ftp socket closed its doors to the public.");
+            if (err && self.onError)
+                self.onError(err);
+
+            self.destroy();
+        });
     };
 
-    /**
-     * Zips (as in array zipping) commands with responses. This creates
-     * a stream that keeps yielding command/response pairs as soon as each pair
-     * becomes available.
-     */
-    var tasks = S.zip(this.serverResponse(input), S.append(S.list(null), cmds));
-    tasks(this.parse.bind(this), function(err) {
-        if (err && self.onError)
-            self.onError(err);
-
-        self.destroy();
-    });
+    createStreams();
 
     this.cmd = cmd;
 };
 
 (function() {
 
-    this._createSocket = function(port, host) {
+    this._createSocket = function(port, host, firstTask) {
+        var self = this;
         var socket = this.socket = Net.createConnection(port, host);
         socket.setEncoding("utf8");
-        //var self = this;
+
         socket.setTimeout(TIMEOUT, function() {
             if (this.onTimeout)
                 this.onTimeout(new Error("FTP socket timeout"));
