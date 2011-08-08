@@ -160,12 +160,12 @@ var Ftp = module.exports = function(cfg) {
     };
 
     /**
-     * `requests` receives a stream of responses from the server and filters
+     * `serverResponse` receives a stream of responses from the server and filters
      * them before pushing them back into the stream. The filtering is
      * necessary to detect multiline responses, in which several responses from
      * the server belong to a single command.
      */
-    this.serverResponse = function requests(source) {
+    this.serverResponse = function(source) {
         var NL = "\n";
         var buffer = [];
         var currentCode = 0;
@@ -317,8 +317,10 @@ var Ftp = module.exports = function(cfg) {
             this.dataConn.destroy();
 
         this.features = null;
-        this.user = null;
+        this.user     = null;
         this.password = null;
+        this.tasks    = null;
+        this.cmds     = null;
     };
 
 
