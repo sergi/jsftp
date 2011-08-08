@@ -152,8 +152,8 @@ var Ftp = module.exports = function(cfg) {
         }.bind(this));
 
         socket.on("connect", function() {
-            if (this.onConnect)
-                this.onConnect();
+            console.log("FTP socket connected");
+            firstTask && firstTask();
         });
 
         return this.socket;
