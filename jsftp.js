@@ -486,9 +486,13 @@ var Ftp = module.exports = function(cfg) {
                 return callback(err);
 
             callback(null,
-                entries.split(/\r\n|\n/).map(function(entry) {
-                    return Parser.entryParser(entry);
-                })
+                entries
+                    .split(/\r\n/)
+                    .map(function(entry) {
+                        return Parser.entryParser(entry.replace("\n", ""));
+                    })
+                    // Flatten the array
+                    .filter(function(value){ return !!value; })
             );
         }
     };
