@@ -487,7 +487,7 @@ var Ftp = module.exports = function(cfg) {
 
             callback(null,
                 entries
-                    .split(/\r\n/)
+                    .split(/\r\n|\n/)
                     .map(function(entry) {
                         return Parser.entryParser(entry.replace("\n", ""));
                     })
