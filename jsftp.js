@@ -83,6 +83,7 @@ var Ftp = module.exports = function(cfg) {
      * once that one is received
      */
     this.push = function(command, callback) {
+        var self = this;
         function send() {
             cmd([command, callback]);
             socket.write(command + "\r\n");
@@ -96,8 +97,11 @@ var Ftp = module.exports = function(cfg) {
             console.log("Reopening socket...")
             socket = this._createSocket(this.port, this.host, function() {
                 createStreams();
-                send()
-                //self.auth(self.currentUser, self.currentPass, send);
+
+                if (self.authenticated)
+                    self.auth(self.user, self.pass, function(err, data) {
+                        if (!err) send();
+                    });
             });
         }
     };
@@ -134,7 +138,6 @@ var Ftp = module.exports = function(cfg) {
     };
 
     createStreams();
-
     this.cmd = cmd;
 };
 
@@ -345,10 +348,13 @@ var Ftp = module.exports = function(cfg) {
                 if ([230, 331, 332].indexOf(res.code) > -1) {
                     self.raw.pass(pass, function(err, res) {
                         if ([230, 202].indexOf(res.code) > -1) {
+                            this.authenticated = true;
+                            this.user = user;
+                            this.pass = pass;
                             callback(null, res);
                         }
                         else if (res.code === 332) {
-                            self.raw.acct("noaccount");
+                            self.raw.acct(""); // ACCT not really supported
                         }
                         else {
                             callback(new Error("Login not accepted"));
