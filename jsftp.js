@@ -56,6 +56,7 @@ var Ftp = module.exports = function(cfg) {
         var lcCmd = cmd.toLowerCase();
         self.raw[lcCmd] = function() {
             var callback;
+            var action = lcCmd;
 
             if (arguments.length) {
                 var args = Array.prototype.slice.call(arguments);
@@ -64,10 +65,10 @@ var Ftp = module.exports = function(cfg) {
                     callback = args.pop();
 
                 if (args.length)
-                    cmd += " " + args.join(" ");
+                    action += " " + args.join(" ");
             }
             self.keepAlive();
-            self.push(cmd, callback);
+            self.push(action, callback);
         };
     });
 
@@ -469,17 +470,9 @@ var Ftp = module.exports = function(cfg) {
      * the listing is finished.
      */
     this.ls = function(filePath, callback) {
-        if (arguments.length === 1) {
-            // The user didn't specify any parameters, let's use LIST without
-            // parameters, since it defaults to the current dir.
-            callback = arguments[0];
-            this.list(entriesToList);
-        }
-        else {
-            this.raw.stat(filePath, function(err, data) {
-                entriesToList(err, data.text);
-            });
-        }
+        this.raw.stat(filePath, function(err, data) {
+            entriesToList(err, data.text);
+        });
 
         function entriesToList(err, entries) {
             if (err)
