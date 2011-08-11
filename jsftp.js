@@ -72,6 +72,9 @@ var Ftp = module.exports = function(cfg) {
         };
     });
 
+    this.cmdListeners = [];
+    this.addCmdListener(this._log);
+
     this.host = cfg.host;
     this.port = cfg.port || FTP_PORT;
 
@@ -142,6 +145,11 @@ var Ftp = module.exports = function(cfg) {
 };
 
 (function() {
+
+    this.addCmdListener = function(listener) {
+        if (this.cmdListeners.indexOf(listener) === -1)
+            this.cmdListeners.push(listener);
+    };
 
     this._createSocket = function(port, host, firstTask) {
         var self = this;
@@ -239,7 +247,10 @@ var Ftp = module.exports = function(cfg) {
             callback = command[1] ? command[1] : null;
         }
 
-        this._log(this._sanitize(cmdName), ftpResponse);
+        var sanitizedCmd = this._sanitize(cmdName);
+        this.cmdListeners.forEach(function(listener) {
+            listener(sanitizedCmd, ftpResponse);
+        });
 
         if (callback) {
             // In FTP every response code above 399 means error in some way.
