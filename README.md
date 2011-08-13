@@ -76,7 +76,7 @@ ftp.auth(user, pass, function(err, res) {
 // I did in the code above.
 
 // Create a directory
-ftp.raw.mkd("/example_dir", function(err, res) {
+ftp.raw.mkd("/example_dir", function(err, data) {
     if (err)
         throw err;
 
@@ -84,7 +84,7 @@ ftp.raw.mkd("/example_dir", function(err, res) {
 });
 
 // Delete a directory
-ftp.raw.rmd("/example_dir", function(err, res) {
+ftp.raw.rmd("/example_dir", function(err, data) {
     if (err)
         throw err;
 
