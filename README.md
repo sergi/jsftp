@@ -36,7 +36,7 @@ Usage examples
 ```javascript
 // Initialize some common variables
 var user = "johndoe";
-var pass = "12345"
+var pass = "12345";
 
 var ftp = new Ftp({
     host: "myhost.com",
