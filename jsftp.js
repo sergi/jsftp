@@ -492,7 +492,7 @@ var Ftp = module.exports = function(cfg) {
             // 'STAT' command. We use 'LIST' instead.
             if (err && data.code === 502)
                 self.list(filePath, function(err, data) {
-                    entriesToList(err, data.text)
+                    entriesToList(err, data)
                 });
             else
                 entriesToList(err, data.text);
