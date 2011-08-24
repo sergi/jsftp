@@ -426,8 +426,7 @@ var Ftp = module.exports = function(cfg) {
 
     /**
      * Downloads a file from FTP server, given a valid Path. It uses the RETR
-     * command to retrieve the file. the `get` and `retr` methods are synonymous of
-     * this method.
+     * command to retrieve the file.
      */
     this.get = function(filePath, callback) {
         var self = this;
