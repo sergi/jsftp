@@ -486,8 +486,16 @@ var Ftp = module.exports = function(cfg) {
      * the listing is finished.
      */
     this.ls = function(filePath, callback) {
+        var self = this;
         this.raw.stat(filePath, function(err, data) {
-            entriesToList(err, data.text);
+            // We might be connnected to a server that doesn't support the
+            // 'STAT' command. We use 'LIST' instead.
+            if (err && data.code === 502)
+                self.list(filePath, function(err, data) {
+                    entriesToList(err, data.text)
+                });
+            else
+                entriesToList(err, data.text);
         });
 
         function entriesToList(err, entries) {
