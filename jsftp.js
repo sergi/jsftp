@@ -35,7 +35,7 @@ var COMMANDS = [
 // This array contains the codes for special commands, such as RETR or STOR,
 // which send two responses instead of one. Not a multiline response, but
 // literally two.
-var SPECIAL_CMDS = [150];
+var SPECIAL_CMDS = [150, 125];
 
 var Ftp = module.exports = function(cfg) {
     if (cfg.onError)
@@ -362,6 +362,11 @@ var Ftp = module.exports = function(cfg) {
                             this.authenticated = true;
                             this.user = user;
                             this.pass = pass;
+
+                            self.raw.syst(function(err, res) {
+                                if (!err && res.code === 215)
+                                    self.system = res.text.toLowerCase();
+                            });
                             callback(null, res);
                         }
                         else if (res.code === 332) {
@@ -432,8 +437,9 @@ var Ftp = module.exports = function(cfg) {
         var self = this;
         var mode = "I";
         this.raw.type(mode, function(err, res) {
-            if (err || (res.code !== 250 && res.code !== 200))
+            if (err || (res.code !== 250 && res.code !== 200)){
                 return callback(res.text);
+            }
 
             self.setPassive(mode, callback);
             self.push("RETR" + (filePath ? " " + filePath : ""));
@@ -488,14 +494,17 @@ var Ftp = module.exports = function(cfg) {
     this.ls = function(filePath, callback) {
         var self = this;
         this.raw.stat(filePath, function(err, data) {
-            // We might be connnected to a server that doesn't support the
+            // We might be connected to a server that doesn't support the
             // 'STAT' command. We use 'LIST' instead.
-            if (err && data.code === 502)
+            if ((err && data.code === 502) ||
+                (self.system && self.system.indexOf("windows") > -1)) {
                 self.list(filePath, function(err, data) {
                     entriesToList(err, data)
                 });
-            else
+            }
+            else {
                 entriesToList(err, data.text);
+            }
         });
 
         function entriesToList(err, entries) {

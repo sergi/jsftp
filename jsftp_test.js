@@ -9,6 +9,7 @@ var assert = require("assert");
 var Fs = require("fs");
 var exec = require('child_process').spawn;
 var Ftp = require("./jsftp");
+var Path = require("path");
 
 // Write down your system credentials. This test suite will use OSX internal
 // FTP server. If you want to test against a remote server, simply change the
@@ -142,11 +143,13 @@ module.exports = {
     "test ftp node stat": function(next) {
         var ftp = this.ftp;
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
-            ftp.raw.cwd(remoteCWD, function(err, res) {
-                ftp.raw.stat(remoteCWD, function(err, res) {
+            ftp.raw.pwd(function(err, res) {
+                var parent = /.*"(.*)".*/.exec(res.text)[1];
+                var path = Path.resolve(parent + "/" + remoteCWD);
+                ftp.raw.stat(path, function(err, res) {
                     assert.ok(!err);
 
-                    assert.ok(res.code === 211);
+                    assert.ok(res.code === 211 || res.code === 212 || res.code === 213);
                     next();
                 });
             });
@@ -254,11 +257,31 @@ module.exports = {
         var file1 = "testfile.txt";
 
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
-            ftp.put(remoteCWD + "/" + file1, new Buffer("test"), function(err, res) {
-                assert.ok(!err);
+            ftp.raw.pwd(function(err, res) {
+                var parent = /.*"(.*)".*/.exec(res.text)[1];
+                var pathDir = Path.resolve(parent + "/" + remoteCWD);
+                var path = Path.resolve(pathDir + "/" + file1);
 
-                ftp.raw.cwd(remoteCWD, function(err, res) {
-                    ftp.ls(function(err, res) {
+                ftp.put(path, new Buffer("test"), function(err, res) {
+                    assert.ok(!err);
+
+                    ftp.raw.cwd(pathDir, function(err, res) {
+                        ftp.ls(".", function(err, res) {
+                            assert.ok(!err);
+
+                            assert.ok(Array.isArray(res));
+
+                            var fileNames = res.map(function(file) {
+                                return file ? file.name : null;
+                            });
+
+                            assert.ok(fileNames.indexOf(file1) > -1);
+
+                            next();
+                        });
+                    });
+
+                    ftp.ls(pathDir, function(err, res) {
                         assert.ok(!err);
 
                         assert.ok(Array.isArray(res));
@@ -271,20 +294,6 @@ module.exports = {
 
                         next();
                     });
-                });
-
-                ftp.ls(remoteCWD, function(err, res) {
-                    assert.ok(!err);
-
-                    assert.ok(Array.isArray(res));
-
-                    var fileNames = res.map(function(file) {
-                        return file ? file.name : null;
-                    });
-
-                    assert.ok(fileNames.indexOf(file1) > -1);
-
-                    next();
                 });
             });
         });
