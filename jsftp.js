@@ -97,7 +97,7 @@ var Ftp = module.exports = function(cfg) {
         }
         else {
             socket.destroy();
-            console.log("Reopening socket...")
+            console.log("FTP socket is not writable, reopening socket...")
             socket = this._createSocket(this.port, this.host, function() {
                 createStreams();
 
@@ -503,16 +503,16 @@ var Ftp = module.exports = function(cfg) {
                 });
             }
             else {
-                entriesToList(err, data.text);
+                entriesToList(err, data);
             }
         });
 
         function entriesToList(err, entries) {
             if (err)
-                return callback(err);
+                return callback(err, entries);
 
             callback(null,
-                entries
+                entries.text
                     .split(/\r\n|\n/)
                     .map(function(entry) {
                         return Parser.entryParser(entry.replace("\n", ""));
