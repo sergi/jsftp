@@ -87,6 +87,7 @@ var Ftp = module.exports = function(cfg) {
      */
     this.push = function(command, callback) {
         var self = this;
+
         function send() {
             cmd([command, callback]);
             socket.write(command + "\r\n");
@@ -96,9 +97,8 @@ var Ftp = module.exports = function(cfg) {
             send();
         }
         else {
-            socket.destroy();
             console.log("FTP socket is not writable, reopening socket...")
-            socket = this._createSocket(this.port, this.host, function() {
+            socket.connect(this.port, this.host, function() {
                 createStreams();
 
                 if (self.authenticated)
@@ -136,7 +136,7 @@ var Ftp = module.exports = function(cfg) {
             if (err && self.onError)
                 self.onError(err);
 
-            self.destroy();
+            //self.destroy();
         });
     };
 
@@ -332,8 +332,6 @@ var Ftp = module.exports = function(cfg) {
             this.dataConn.destroy();
 
         this.features = null;
-        this.user     = null;
-        this.password = null;
         this.tasks    = null;
         this.cmds     = null;
     };
