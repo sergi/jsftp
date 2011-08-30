@@ -359,9 +359,9 @@ var Ftp = module.exports = function(cfg) {
                 if ([230, 331, 332].indexOf(res.code) > -1) {
                     self.raw.pass(pass, function(err, res) {
                         if ([230, 202].indexOf(res.code) > -1) {
-                            this.authenticated = true;
-                            this.user = user;
-                            this.pass = pass;
+                            self.authenticated = true;
+                            self.user = user;
+                            self.pass = pass;
 
                             self.raw.syst(function(err, res) {
                                 if (!err && res.code === 215)
