@@ -258,9 +258,16 @@ module.exports = {
 
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
             ftp.raw.pwd(function(err, res) {
-                var parent = /.*"(.*)".*/.exec(res.text)[1];
-                var pathDir = Path.resolve(parent + "/" + remoteCWD);
-                var path = Path.resolve(pathDir + "/" + file1);
+                var parent, pathDir, path;
+                if (remoteCWD.charAt(0) !== "/") {
+                    parent = /.*"(.*)".*/.exec(res.text)[1];
+                    pathDir = Path.resolve(parent + "/" + remoteCWD);
+                    path = Path.resolve(pathDir + "/" + file1);
+                }
+                else {
+                    pathDir = remoteCWD;
+                    path = Path.resolve(remoteCWD + "/" + file1);
+                }
 
                 ftp.put(path, new Buffer("test"), function(err, res) {
                     assert.ok(!err);
@@ -279,20 +286,6 @@ module.exports = {
 
                             next();
                         });
-                    });
-
-                    ftp.ls(pathDir, function(err, res) {
-                        assert.ok(!err);
-
-                        assert.ok(Array.isArray(res));
-
-                        var fileNames = res.map(function(file) {
-                            return file ? file.name : null;
-                        });
-
-                        assert.ok(fileNames.indexOf(file1) > -1);
-
-                        next();
                     });
                 });
             });
