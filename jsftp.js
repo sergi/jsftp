@@ -98,9 +98,10 @@ var Ftp = module.exports = function(cfg) {
         var user = this.options.user;
         var pass = this.options.pass;
         var commandLC = command ? command.toLowerCase() : "";
+        var isAuthCmd = /feat.*/.test(commandLC) || /user.*/.test(commandLC) || /pass.*/.test(commandLC);
 
         if (socket.writable) {
-            if (!this.authenticated && !/feat.*/.test(commandLC) && !/user.*/.test(commandLC) && !/pass.*/.test(commandLC))
+            if (!this.authenticated && !isAuthCmd)
                 self.auth(user, pass, send);
             else
                 send();
@@ -114,9 +115,8 @@ var Ftp = module.exports = function(cfg) {
                     self.auth(user, pass, function(err, data) {
                         self.connecting = false;
                         self.connected = true;
-                        if (!err)
-                            if (!/feat.*/.test(commandLC) && !/user.*/.test(commandLC) && !/pass.*/.test(commandLC))
-                                send();
+                        if (!err && !isAuthCmd)
+                            send();
                     });
                 };
 
@@ -176,6 +176,7 @@ var Ftp = module.exports = function(cfg) {
 
     this._createSocket = function(port, host, firstTask) {
         var self = this;
+        this.connecting = true;
         var socket = this.socket = Net.createConnection(port, host);
         socket.setEncoding("utf8");
 
@@ -190,6 +191,7 @@ var Ftp = module.exports = function(cfg) {
             console.log("FTP socket connected");
             firstTask && firstTask();
             self.connected = true;
+            self.connecting = false;
         });
 
         return this.socket;
@@ -232,7 +234,7 @@ var Ftp = module.exports = function(cfg) {
                         // it up properly with its response, and avoid messing
                         // up the zipped streams.
                         if (SPECIAL_CMDS.indexOf(code) > -1)
-                            self.cmd(null)
+                            self.cmd(null);
 
                         next({ code: code, text: line });
                     }
@@ -244,6 +246,8 @@ var Ftp = module.exports = function(cfg) {
                     }
 
                 }, this);
+
+                self.keepAlive();
             }, stop);
         };
     };
@@ -294,7 +298,6 @@ var Ftp = module.exports = function(cfg) {
             else
                 self.features = self._parseFeats(response.text);
 
-            self.keepAlive();
             callback();
         });
     };
@@ -373,14 +376,20 @@ var Ftp = module.exports = function(cfg) {
      * @param callback {Function} Follow-up function.
      */
     this.auth = function(user, pass, callback) {
+        if (this.authenticating)
+            return;
+
         if (!user) user = "anonymous";
         if (!pass) pass = "@anonymous";
 
         var self = this;
+        this.authenticating = true;
         this._initialize(function() {
             self.raw.user(user, function(err, res) {
                 if ([230, 331, 332].indexOf(res.code) > -1) {
                     self.raw.pass(pass, function(err, res) {
+                        self.authenticating = false;
+
                         if ([230, 202].indexOf(res.code) > -1) {
                             self.authenticated = true;
                             self.user = user;
@@ -400,6 +409,7 @@ var Ftp = module.exports = function(cfg) {
                         }
                     });
                 } else {
+                    self.authenticating = false;
                     callback(new Error("Login not accepted"));
                 }
             });
@@ -460,7 +470,7 @@ var Ftp = module.exports = function(cfg) {
         var self = this;
         var mode = "I";
         this.raw.type(mode, function(err, res) {
-            if (err || (res.code !== 250 && res.code !== 200)){
+            if (err || (res.code !== 250 && res.code !== 200)) {
                 return callback(res.text);
             }
 
