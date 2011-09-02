@@ -38,6 +38,8 @@ var COMMANDS = [
 var SPECIAL_CMDS = [150, 125];
 
 var Ftp = module.exports = function(cfg) {
+    this.options = cfg;
+
     if (cfg.onError)
         this.onError = cfg.onError;
 
@@ -93,19 +95,39 @@ var Ftp = module.exports = function(cfg) {
             socket.write(command + "\r\n");
         }
 
+        var user = this.options.user;
+        var pass = this.options.pass;
+        var commandLC = command ? command.toLowerCase() : "";
+
         if (socket.writable) {
-            send();
+            if (!this.authenticated && !/feat.*/.test(commandLC) && !/user.*/.test(commandLC) && !/pass.*/.test(commandLC))
+                self.auth(user, pass, send);
+            else
+                send();
         }
         else {
             console.log("FTP socket is not writable, reopening socket...")
-            socket.connect(this.port, this.host, function() {
-                createStreams();
+            if (!this.connecting) {
+                this.connecting = true;
 
-                if (self.authenticated)
-                    self.auth(self.user, self.pass, function(err, data) {
-                        if (!err) send();
+                var reConnect = function() {
+                    self.auth(user, pass, function(err, data) {
+                        self.connecting = false;
+                        self.connected = true;
+                        if (!err)
+                            if (!/feat.*/.test(commandLC) && !/user.*/.test(commandLC) && !/pass.*/.test(commandLC))
+                                send();
                     });
-            });
+                };
+
+                try {
+                    socket = this._createSocket(this.port, this.host, reConnect);
+                    createStreams();
+                }
+                catch (e) {
+                    console.log(e);
+                }
+            }
         }
     };
 
@@ -132,16 +154,17 @@ var Ftp = module.exports = function(cfg) {
          */
         tasks = S.zip(self.serverResponse(input), S.append(S.list(null), cmds));
         tasks(self.parse.bind(self), function(err) {
-            console.log("Ftp socket closed its doors to the public.");
+            console.log("Ftp socket closed its doors to the public.", err || "");
             if (err && self.onError)
                 self.onError(err);
 
-            //self.destroy();
+            self.destroy();
         });
     };
 
     createStreams();
     this.cmd = cmd;
+    this.connected = false;
 };
 
 (function() {
@@ -166,6 +189,7 @@ var Ftp = module.exports = function(cfg) {
         socket.on("connect", function() {
             console.log("FTP socket connected");
             firstTask && firstTask();
+            self.connected = true;
         });
 
         return this.socket;
@@ -271,7 +295,6 @@ var Ftp = module.exports = function(cfg) {
                 self.features = self._parseFeats(response.text);
 
             self.keepAlive();
-
             callback();
         });
     };
@@ -334,6 +357,8 @@ var Ftp = module.exports = function(cfg) {
         this.features = null;
         this.tasks    = null;
         this.cmds     = null;
+        this.connected = false;
+        this.authenticated = false;
     };
 
 
@@ -495,7 +520,7 @@ var Ftp = module.exports = function(cfg) {
             // We might be connected to a server that doesn't support the
             // 'STAT' command. We use 'LIST' instead.
             if ((err && data.code === 502) ||
-                (self.system && self.system.indexOf("windows") > -1)) {
+                (self.system && self.system.indexOf("hummingbird") > -1)) {
                 self.list(filePath, function(err, data) {
                     entriesToList(err, data)
                 });
