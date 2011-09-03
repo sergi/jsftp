@@ -457,8 +457,9 @@ var Ftp = module.exports = function(cfg) {
             if (err || (res.code !== 250 && res.code !== 200))
                 return callback(res.text);
 
-            self.setPassive(mode, callback);
-            self.push("LIST" + (filePath ? " " + filePath : ""));
+            self.setPassive(mode, callback, function() {
+                self.push("LIST" + (filePath ? " " + filePath : ""));
+            });
         });
     };
 
@@ -474,8 +475,9 @@ var Ftp = module.exports = function(cfg) {
                 return callback(res.text);
             }
 
-            self.setPassive(mode, callback);
-            self.push("RETR" + (filePath ? " " + filePath : ""));
+            self.setPassive(mode, callback, function() {
+                self.push("RETR" + (filePath ? " " + filePath : ""));
+            });
         });
     };
 
