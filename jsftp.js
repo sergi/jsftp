@@ -560,7 +560,7 @@ var Ftp = module.exports = function(cfg) {
         var raw = this.raw;
         raw.rnfr(from, function(err, res) {
             if (err)
-                callback(err);
+                return callback(err);
 
             raw.rnto(to, function(err, res) { callback(err, res) });
         });
