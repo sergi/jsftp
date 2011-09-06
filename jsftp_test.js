@@ -15,15 +15,15 @@ var Path = require("path");
 // FTP server. If you want to test against a remote server, simply change the
 // `host` and `port` properties as well.
 var FTPCredentials = {
-    host: "localhost",
-    user: "",
+    host: "sergimansilla.com",
+    user: "mrclash",
     port: 21,
-    pass: ""
+    pass: "ketu48"
 };
 
 var CWD = process.cwd();
 // Substitute "test_c9" by a real directory in your remote FTP server.
-var remoteCWD = FTPCredentials.host === "localhost" ? CWD : "/test_c9";
+var remoteCWD = FTPCredentials.host === "localhost" ? CWD : "test_c9";
 console.log("Current working directory is " + CWD + "\n");
 
 // Execution ORDER: test.setUpSuite, setUp, testFn, tearDown, test.tearDownSuite
@@ -135,6 +135,9 @@ module.exports = {
 
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(res) {
             ftp.list(remoteCWD, function(err, res){
+                console.log(err, res)
+                assert.ok(res);
+                assert.ok(!err);
                 next();
             });
         });
@@ -148,6 +151,7 @@ module.exports = {
                 var path = Path.resolve(parent + "/" + remoteCWD);
                 ftp.raw.stat(path, function(err, res) {
                     assert.ok(!err);
+                    assert.ok(res)
 
                     assert.ok(res.code === 211 || res.code === 212 || res.code === 213);
                     next();
@@ -237,6 +241,7 @@ module.exports = {
             Fs.readFile(filePath, "binary", function(err, data) {
                 var buffer = new Buffer(data, "binary");
                 ftp.put(remoteCWD + "/test_get.js", buffer, function(err, res) {
+                    console.log("alebule");
                     assert.ok(!err, err);
                     ftp.get(remoteCWD + "/test_get.js", function(err, data) {
                         assert.ok(!err, err);
@@ -250,6 +255,30 @@ module.exports = {
                 });
             });
         });
+    },
+
+    ">test get two files synchronously": function(next) {
+        var ftp = this.ftp;
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            ftp.get(remoteCWD + "/testfile.txt", function(err, data) {
+                        assert.ok(!err, err);
+                        assert.ok(data);
+                        console.log(data)
+
+                });
+            ftp.get(remoteCWD + "/testfile.txt", function(err, data) {
+                        assert.ok(!err, err);
+                        assert.ok(data);
+                        console.log(data)
+                    });
+            ftp.get(remoteCWD + "/testfile.txt", function(err, data) {
+                        assert.ok(!err, err);
+                        assert.ok(data);
+                        console.log(data)
+                        next()
+
+                    });
+                });
     },
 
     "test get fileList array": function(next) {

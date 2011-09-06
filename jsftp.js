@@ -9,7 +9,7 @@ var Net = require("net");
 var ftpPasv = require("./lib/ftpPasv");
 var S;
 try { S = require("streamer"); }
-catch (e) { S = require("./support/streamer"); }
+catch (e) { S = require("./support/streamer/core"); }
 
 var Parser = require('./lib/ftp_parser');
 
@@ -31,6 +31,24 @@ var COMMANDS = [
     // Extended features
     "SYST", "CHMOD", "SIZE"
 ];
+
+// Simplified version of https://github.com/Gozala/streamer/blob/queue/queue.js
+function queue() {
+   var next, buffer = Array.prototype.slice.call(arguments)
+   function stream($, stop) { next = $; stream._update() }
+   stream._update = function _update() {
+    buffer.push.apply(buffer, arguments)
+    if (next && buffer.length) {
+      if (false !== next(buffer.shift())) _update()
+    }
+  }
+  return stream
+}
+
+function enqueue(stream, element) {
+   stream._update.apply(null, Array.prototype.slice.call(arguments, 1))
+}
+
 
 // This array contains the codes for special commands, such as RETR or STOR,
 // which send two responses instead of one. Not a multiline response, but
@@ -71,6 +89,7 @@ var Ftp = module.exports = function(cfg) {
             }
             self.keepAlive();
             self.push(action, callback);
+            //if (action.indexOf("stat") > -1)
         };
     });
 
@@ -89,6 +108,7 @@ var Ftp = module.exports = function(cfg) {
      */
     this.push = function(command, callback) {
         var self = this;
+
 
         function send() {
             cmd([command, callback]);
@@ -140,8 +160,18 @@ var Ftp = module.exports = function(cfg) {
         socket.on("close", stop);
     };
 
-    var cmds, tasks;
+    var cmds, tasks, pasvQueue, pasvReqs, pasv;
     var createStreams = function() {
+        pasvReqs = self.pasvReqs = queue()
+
+        !function recur() {
+            // Take first element from `pasvReqs` and process it via `processElement` black box that will call
+           // `recur` once it's done to process next element from the `pasvReqs` queue.
+            S.head(pasvReqs)(function(element) {
+               self.processPasv(element, recur)
+            })
+        }()
+
         // Stream of FTP commands from the client.
         cmds = function(next, stop) {
             cmd = next;
@@ -164,6 +194,7 @@ var Ftp = module.exports = function(cfg) {
 
     createStreams();
     this.cmd = cmd;
+    this.pasv = pasv;
     this.connected = false;
 };
 
@@ -235,8 +266,8 @@ var Ftp = module.exports = function(cfg) {
                         // up the zipped streams.
                         if (SPECIAL_CMDS.indexOf(code) > -1)
                             self.cmd(null);
-
-                        next({ code: code, text: line });
+                        else
+                            next({ code: code, text: line });
                     }
                     else {
                         if (!buffer.length && (multiRes = RE_MULTI.exec(line)))
@@ -359,7 +390,6 @@ var Ftp = module.exports = function(cfg) {
 
         this.features = null;
         this.tasks    = null;
-        this.cmds     = null;
         this.connected = false;
         this.authenticated = false;
     };
@@ -425,8 +455,19 @@ var Ftp = module.exports = function(cfg) {
      * @param callback {Function} Function to call when socket has received all the data
      * @param onConnect {Function} Function to call when the passive socket connects
      */
-    this.setPassive = function(mode, callback, onConnect) {
+    this.setPassive = function(pasvData) {
+        enqueue(this.pasvReqs, pasvData);
+    };
+
+    this.processPasv = function(pasvData, next) {
         var self = this;
+
+        var callback = function(err, res) {
+            console.log("get here")
+            pasvData.callback(err, res);
+            next();
+        };
+
         this.raw.pasv(function(err, res) {
             if (err || res.code !== 227)
                 return callback(res.text);
@@ -436,7 +477,7 @@ var Ftp = module.exports = function(cfg) {
                 return callback("PASV: Bad port "); // bad port
 
             var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-            this.dataConn = new ftpPasv(self.host, port, mode, callback, onConnect);
+            this.dataConn = new ftpPasv(self.host, port, pasvData.mode, callback, pasvData.onConnect);
         });
     };
 
@@ -457,8 +498,12 @@ var Ftp = module.exports = function(cfg) {
             if (err || (res.code !== 250 && res.code !== 200))
                 return callback(res.text);
 
-            self.setPassive(mode, callback, function() {
-                self.push("LIST" + (filePath ? " " + filePath : ""));
+            self.setPassive({
+                mode: mode,
+                callback: callback,
+                onConnect: function(socket) {
+                    self.raw.list(filePath);
+                }
             });
         });
     };
@@ -475,8 +520,12 @@ var Ftp = module.exports = function(cfg) {
                 return callback(res.text);
             }
 
-            self.setPassive(mode, callback, function() {
-                self.push("RETR" + (filePath ? " " + filePath : ""));
+            self.setPassive({
+                mode: mode,
+                callback: callback,
+                onConnect: function(socket) {
+                    self.raw.retr(filePath);
+                }
             });
         });
     };
@@ -488,13 +537,17 @@ var Ftp = module.exports = function(cfg) {
             if (err || (res.code !== 250 && res.code !== 200))
                 return callback(res.text);
 
-            self.setPassive(mode, callback, function(socket) {
-                self.raw.stor(filePath, function(err, res) {
-                    if (err)
-                        callback(err);
+            self.setPassive({
+                mode: mode,
+                callback: callback,
+                onConnect: function(socket) {
+                    self.raw.stor(filePath, function(err, res) {
+                        if (err)
+                            callback(err);
 
-                    socket.end(buffer);
-                });
+                        socket.end(buffer);
+                    });
+                }
             });
         });
     };
