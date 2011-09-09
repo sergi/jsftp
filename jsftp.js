@@ -32,6 +32,8 @@ var COMMANDS = [
     "SYST", "CHMOD", "SIZE"
 ];
 
+var DEBUG_MODE = true;
+
 function queue() {
     var next;
     var buffer = Array.prototype.slice.call(arguments);
@@ -65,14 +67,11 @@ function isMark(code) {
 var Ftp = module.exports = function(cfg) {
     this.options = cfg;
 
-    if (cfg.onError)
+    if (cfg) {
         this.onError = cfg.onError;
-
-    if (cfg.onTimeout)
         this.onTimeout = cfg.onTimeout;
-
-    if (cfg.onConnect)
         this.onConnect = cfg.onConnect;
+    }
 
     // Generate generic methods from parameter names. They can easily be
     // overriden if we need special behavior. They accept any parameters given,
@@ -95,16 +94,21 @@ var Ftp = module.exports = function(cfg) {
                     action += " " + args.join(" ");
             }
             self.keepAlive();
+            self.push(action, callback);
 
+            /*
             enqueue(self.cmdQueue, {
                 cmd: action,
                 callback: callback
             });
+            */
         };
     });
 
     this.cmdListeners = [];
-    this.addCmdListener(this._log);
+
+    if (DEBUG_MODE)
+        this.addCmdListener(this._log);
 
     this.host = cfg.host;
     this.port = cfg.port || FTP_PORT;
@@ -116,10 +120,8 @@ var Ftp = module.exports = function(cfg) {
      * command into `cmds` list. This command will get paired with its response
      * once that one is received
      */
-    this.push = function(cmdObj) {
+    this.push = function(command, callback) {
         var self = this;
-        var command  = cmdObj.cmd;
-        var callback = cmdObj.callback;
 
         function send() {
             cmd([command, callback]);
@@ -174,12 +176,14 @@ var Ftp = module.exports = function(cfg) {
 
     var cmds, tasks;
     var createStreams = function() {
+        /*
         self.cmdQueue = queue();
         (self.nextCmd = function nextCmd() {
             S.head(self.cmdQueue)(function(obj) {
                 self.push(obj, self.nextCmd);
             });
         })();
+        */
 
         self.pasvQueue = queue();
         (self.nextPasv = function nextPasv() {
@@ -262,7 +266,6 @@ var Ftp = module.exports = function(cfg) {
 
         return function stream(next, stop) {
             source(function(data) {
-            console.log("RECEIVING", data)
                 var lines = data.replace(RE_NL_END, "").replace(RE_NL, NL).split(NL);
 
                 lines.forEach(function(line) {
@@ -282,19 +285,8 @@ var Ftp = module.exports = function(cfg) {
                             }
                         }
 
-                        // If the response code belongs to one of the 'special'
-                        // commands (see above), insert a dummy command to pair
-                        // it up properly with its response, and avoid messing
-                        // up the zipped streams.
-                        //if (isMark(code)) {
-                            //enqueue(self.cmdQueue, {
-                                //cmd: null,
-                                //callback: null
-                            //});
-                        //}
-                        //else {
-                            next({ code: code, text: line });
-                        //}
+                        console.log("RECEIVING", line);
+                        next({ code: code, text: line });
                     }
                     else {
                         if (!buffer.length && (multiRes = RE_MULTI.exec(line)))
@@ -304,7 +296,6 @@ var Ftp = module.exports = function(cfg) {
                     }
 
                 }, this);
-
                 self.keepAlive();
             }, stop);
         };
@@ -330,12 +321,12 @@ var Ftp = module.exports = function(cfg) {
         var cmdName, callback;
         if (command) {
             cmdName  = command[0];
-            callback = command[1] ? command[1] : null;
+            callback = command[1];
         }
 
-        var sanitizedCmd = this._sanitize(cmdName);
+        var cleanCmd = this._sanitize(cmdName);
         this.cmdListeners.forEach(function(listener) {
-            listener(sanitizedCmd, ftpResponse);
+            listener(cleanCmd, ftpResponse);
         });
 
         if (callback) {
@@ -346,8 +337,6 @@ var Ftp = module.exports = function(cfg) {
             var error = hasFailed && ftpResponse.text;
             callback(error, ftpResponse);
         }
-
-        this.nextCmd();
     };
 
     this._initialize = function(callback) {
@@ -402,9 +391,7 @@ var Ftp = module.exports = function(cfg) {
             features = features.slice(1, -1).map(function(feature) {
                 return /^\s*(\w*)\s*/.exec(feature)[1].trim().toLowerCase();
             });
-
         }
-
         return features;
     };
 
@@ -415,14 +402,13 @@ var Ftp = module.exports = function(cfg) {
         this.socket.destroy();
 
         if (this.dataConn)
-            this.dataConn.destroy();
+            this.dataConn.socket.destroy();
 
         this.features = null;
         this.tasks    = null;
         this.connected = false;
         this.authenticated = false;
     };
-
 
     // Below this point all the methods are action helpers for FTP that compose
     // several actions in one command
@@ -443,7 +429,7 @@ var Ftp = module.exports = function(cfg) {
 
         var self = this;
         this.authenticating = true;
-        this._initialize(function() {
+        //this._initialize(function() {
             self.raw.user(user, function(err, res) {
                 if ([230, 331, 332].indexOf(res.code) > -1) {
                     self.raw.pass(pass, function(err, res) {
@@ -472,7 +458,7 @@ var Ftp = module.exports = function(cfg) {
                     callback(new Error("Login not accepted"));
                 }
             });
-        });
+        //});
     };
 
     /**
@@ -484,8 +470,8 @@ var Ftp = module.exports = function(cfg) {
      * @param callback {Function} Function to call when socket has received all the data
      * @param onConnect {Function} Function to call when the passive socket connects
      */
-    this.setPassive = function(pasvData) {
-        enqueue(this.pasvQueue, pasvData);
+    this.setPassive = function(data) {
+        enqueue(this.pasvQueue, data);
     };
 
     this.processPasv = function(pasvData, next) {
@@ -503,10 +489,17 @@ var Ftp = module.exports = function(cfg) {
 
                 var match = RE_PASV.exec(res.text);
                 if (!match)
-                    return callback("PASV: Bad port "); // bad port
+                    return callback("PASV: Bad port ");
 
                 var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-                self.dataConn = new ftpPasv(self.host, port, pasvData.mode, callback, pasvData.onConnect);
+                self.dataConn = new ftpPasv({
+                    host: self.host,
+                    port: port,
+                    mode: pasvData.mode,
+                    callback: callback,
+                    onConnect: pasvData.onConnect,
+                    ftp: self
+                });
             });
         };
 
@@ -517,8 +510,6 @@ var Ftp = module.exports = function(cfg) {
         else {
             doPasv();
         }
-
-
     };
 
     /**
@@ -533,18 +524,12 @@ var Ftp = module.exports = function(cfg) {
         }
 
         var self = this;
-        var mode = "A";
-        this.raw.type(mode, function(err, res) {
-            if (err || (res.code !== 250 && res.code !== 200))
-                return callback(res.text);
 
-            self.setPassive({
-                mode: mode,
-                callback: callback,
-                onConnect: function(socket) {
-                    self.raw.list(filePath);
-                }
-            });
+        self.setPassive({
+            callback: callback,
+            onConnect: function(socket) {
+                self.raw.list(filePath);
+            }
         });
     };
 
@@ -554,41 +539,32 @@ var Ftp = module.exports = function(cfg) {
      */
     this.get = function(filePath, callback) {
         var self = this;
-        var mode = "I";
-        this.raw.type(mode, function(err, res) {
-            if (err || (res.code !== 250 && res.code !== 200)) {
-                return callback(res.text);
+        self.setPassive({
+            mode: "I",
+            callback: callback,
+            onConnect: function(socket) {
+                self.raw.retr(filePath);
             }
-
-            self.setPassive({
-                mode: mode,
-                callback: callback,
-                onConnect: function(socket) {
-                    self.raw.retr(filePath);
-                }
-            });
         });
     };
 
     this.put = function(filePath, buffer, callback) {
         var self = this;
-        var mode = "I";
-        this.raw.type(mode, function(err, res) {
-            if (err || (res.code !== 250 && res.code !== 200))
-                return callback(res.text);
+        self.setPassive({
+            mode: "I",
+            callback: callback,
+            onConnect: function(socket) {
+                self.raw.stor(filePath, function(err, res) {
+                    if (err)
+                        callback(err);
+                });
 
-            self.setPassive({
-                mode: mode,
-                callback: callback,
-                onConnect: function(socket) {
-                    self.raw.stor(filePath, function(err, res) {
-                        if (err)
-                            callback(err);
-
-                        socket.end(buffer);
-                    });
-                }
-            });
+                // We make sure that we close the socket AFTER the 'stor'
+                // command has been sent to the server.
+                setTimeout(function() {
+                    socket.end(buffer);
+                }, 100);
+            }
         });
     };
 
