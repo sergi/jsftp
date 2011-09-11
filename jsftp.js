@@ -68,6 +68,11 @@ function isMark(code) {
 var Ftp = module.exports = function(cfg) {
     this.raw = {};
     this.options = cfg;
+    // This variable will be true if the server doesn't support the `stat`
+    // command. Since listing a directory or retrieving file properties is
+    // quite a common operation, it is more efficient to avoid the round-trip
+    // to the server.
+    this.useList = false;
 
     if (cfg) {
         this.onError = cfg.onError;
@@ -583,24 +588,36 @@ var Ftp = module.exports = function(cfg) {
      * the listing is finished.
      */
     this.ls = function(filePath, callback) {
-        var self = this;
-        this.raw.stat(filePath, function(err, data) {
-            // We might be connected to a server that doesn't support the
-            // 'STAT' command. We use 'LIST' instead.
-            if ((err && (data.code === 502 || data.code === 500)) ||
-                (self.system && self.system.indexOf("hummingbird") > -1)) {
-                self.list(filePath, function(err, data) {
+        if (this.useList) {
+            this.list(filePath, entriesToList);
+        }
+        else {
+            var self = this;
+            this.raw.stat(filePath, function(err, data) {
+                // We might be connected to a server that doesn't support the
+                // 'STAT' command, which is set as default. We use 'LIST' instead,
+                // and we set the variable `useList` to true, to avoid extra round
+                // trips to the server to check.
+                if ((err && (data.code === 502 || data.code === 500)) ||
+                    // Not sure if the "hummingbird" system check ^^^ his still
+                    // necessary. If they support any standards, the 500 error
+                    // should have us covered. Let's leave it for now.
+                    (self.system && self.system.indexOf("hummingbird") > -1)) {
+                    self.useList = true;
+                    self.list(filePath, entriesToList);
+                }
+                else {
                     entriesToList(err, data);
-                });
-            }
-            else {
-                entriesToList(err, data);
-            }
-        });
+                }
+            });
+        }
 
         function entriesToList(err, entries) {
             if (err)
                 return callback(err, entries);
+
+            if (!entries)
+                return callback(null, []);
 
             callback(null,
                 (entries.text || entries)
