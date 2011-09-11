@@ -15,10 +15,10 @@ var Path = require("path");
 // FTP server. If you want to test against a remote server, simply change the
 // `host` and `port` properties as well.
 var FTPCredentials = {
-    host: "sergimansilla.com",
-    user: "mrclash",
+    host: "",
+    user: "",
     port: 21,
-    pass: "ketu48"
+    pass: ""
 };
 
 var CWD = process.cwd();
@@ -86,6 +86,19 @@ module.exports = {
     },
     */
 
+    "test initialize": function(next) {
+        var ftp = this.ftp;
+
+        assert.equal(ftp.options, FTPCredentials);
+        assert.equal(ftp.host, FTPCredentials.host);
+        assert.equal(ftp.port, FTPCredentials.port);
+        assert.equal(ftp.onError, null);
+        assert.equal(ftp.onTimeout, null);
+        assert.equal(ftp.onConnect, null);
+
+        next();
+    },
+
     "test print working directory": function(next) {
         var ftp = this.ftp;
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
@@ -137,7 +150,6 @@ module.exports = {
 
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(res) {
             ftp.list(remoteCWD, function(err, res){
-                console.log(err, res)
                 assert.ok(res);
                 assert.ok(!err);
                 next();
@@ -243,7 +255,6 @@ module.exports = {
             Fs.readFile(filePath, "binary", function(err, data) {
                 var buffer = new Buffer(data, "binary");
                 ftp.put(remoteCWD + "/test_get.js", buffer, function(err, res) {
-                    console.log("alebule");
                     assert.ok(!err, err);
                     ftp.get(remoteCWD + "/test_get.js", function(err, data) {
                         assert.ok(!err, err);
@@ -259,24 +270,20 @@ module.exports = {
         });
     },
 
-    ">test get two files synchronously": function(next) {
+    "test get two files synchronously": function(next) {
         var ftp = this.ftp;
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
             ftp.get(remoteCWD + "/testfile.txt", function(err, data) {
                         assert.ok(!err, err);
                         assert.ok(data);
-                        console.log(data)
-
                 });
             ftp.get(remoteCWD + "/testfile.txt", function(err, data) {
                         assert.ok(!err, err);
                         assert.ok(data);
-                        console.log(data)
                     });
             ftp.get(remoteCWD + "/testfile.txt", function(err, data) {
                         assert.ok(!err, err);
                         assert.ok(data);
-                        console.log(data)
                         next()
 
                     });

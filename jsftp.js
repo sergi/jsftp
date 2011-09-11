@@ -5,13 +5,15 @@
  * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
  */
 
+var S;
 var Net = require("net");
 var ftpPasv = require("./lib/ftpPasv");
-var S;
+var Parser = require('./lib/ftpParser');
+
 try { S = require("streamer"); }
 catch (e) { S = require("./support/streamer/core"); }
 
-var Parser = require('./lib/ftp_parser');
+var slice = Array.prototype.slice;
 
 var FTP_PORT = 21;
 var RE_PASV = /[-\d]+,[-\d]+,[-\d]+,[-\d]+,([-\d]+),([-\d]+)/;
@@ -20,6 +22,7 @@ var RE_MULTI = /^(\d\d\d)-/;
 var RE_NL_END = /\r\n$/;
 var RE_NL = /\r\n/;
 
+var DEBUG_MODE = false;
 var TIMEOUT = 60000;
 var IDLE_TIME = 30000;
 var COMMANDS = [
@@ -32,11 +35,9 @@ var COMMANDS = [
     "SYST", "CHMOD", "SIZE"
 ];
 
-var DEBUG_MODE = true;
-
 function queue() {
     var next;
-    var buffer = Array.prototype.slice.call(arguments);
+    var buffer = slice.call(arguments);
 
     function stream($, stop) {
         next = $;
@@ -56,7 +57,7 @@ function queue() {
 }
 
 function enqueue(stream, element) {
-   stream._update.apply(null, Array.prototype.slice.call(arguments, 1));
+   stream._update.apply(null, slice.call(arguments, 1));
 }
 
 // Codes from 100 to 200 are FTP marks
@@ -65,6 +66,7 @@ function isMark(code) {
 };
 
 var Ftp = module.exports = function(cfg) {
+    this.raw = {};
     this.options = cfg;
 
     if (cfg) {
@@ -77,7 +79,6 @@ var Ftp = module.exports = function(cfg) {
     // overriden if we need special behavior. They accept any parameters given,
     // it is the responsability of the user to validate the parameters.
     var self = this;
-    this.raw = {};
     COMMANDS.forEach(function(cmd) {
         var lcCmd = cmd.toLowerCase();
         self.raw[lcCmd] = function() {
@@ -85,7 +86,7 @@ var Ftp = module.exports = function(cfg) {
             var action = lcCmd;
 
             if (arguments.length) {
-                var args = Array.prototype.slice.call(arguments);
+                var args = slice.call(arguments);
 
                 if (typeof args[args.length - 1] == "function")
                     callback = args.pop();
@@ -93,15 +94,9 @@ var Ftp = module.exports = function(cfg) {
                 if (args.length)
                     action += " " + args.join(" ");
             }
+
             self.keepAlive();
             self.push(action, callback);
-
-            /*
-            enqueue(self.cmdQueue, {
-                cmd: action,
-                callback: callback
-            });
-            */
         };
     });
 
@@ -121,18 +116,19 @@ var Ftp = module.exports = function(cfg) {
      * once that one is received
      */
     this.push = function(command, callback) {
-        var self = this;
+        if (!command || typeof command != "string")
+            return;
+
+        command = command.toLowerCase();
 
         function send() {
             cmd([command, callback]);
-            console.log("WRITING", command)
             socket.write(command + "\r\n");
         }
 
         var user = this.options.user;
         var pass = this.options.pass;
-        var commandLC = command ? command.toLowerCase() : "";
-        var isAuthCmd = /feat.*/.test(commandLC) || /user.*/.test(commandLC) || /pass.*/.test(commandLC);
+        var isAuthCmd = /feat.*/.test(command) || /user.*/.test(command) || /pass.*/.test(command);
 
         if (socket.writable) {
             if (!this.authenticated && !isAuthCmd)
@@ -141,14 +137,15 @@ var Ftp = module.exports = function(cfg) {
                 send();
         }
         else {
-            console.log("FTP socket is not writable, reopening socket...");
+            if (DEBUG_MODE)
+                console.log("FTP socket is not writable, reopening socket...");
+
             if (!this.connecting) {
                 this.connecting = true;
 
                 var reConnect = function() {
                     self.auth(user, pass, function(err, data) {
                         self.connecting = false;
-                        self.connected = true;
                         if (!err && !isAuthCmd)
                             send();
                     });
@@ -205,11 +202,15 @@ var Ftp = module.exports = function(cfg) {
          * becomes available.
          */
         tasks = S.zip(S.filter(function(x) {
+            // We ignore FTP marks for now. They don't convey useful
+            // information. A more elegant solution should be found int he
+            // future.
             return !isMark(x.code);
         }, self.serverResponse(input)), S.append(S.list(null), cmds));
 
         tasks(self.parse.bind(self), function(err) {
-            console.log("Ftp socket closed its doors to the public.", err || "");
+            if (DEBUG_MODE)
+                console.log("Ftp socket closed its doors to the public.", err || "");
             if (err && self.onError)
                 self.onError(err);
 
@@ -219,7 +220,6 @@ var Ftp = module.exports = function(cfg) {
 
     createStreams();
     this.cmd = cmd;
-    this.connected = false;
 };
 
 (function() {
@@ -230,7 +230,6 @@ var Ftp = module.exports = function(cfg) {
     };
 
     this._createSocket = function(port, host, firstTask) {
-        var self = this;
         this.connecting = true;
         var socket = this.socket = Net.createConnection(port, host);
         socket.setEncoding("utf8");
@@ -242,10 +241,10 @@ var Ftp = module.exports = function(cfg) {
             this.destroy();
         }.bind(this));
 
+        var self = this;
         socket.on("connect", function() {
-            console.log("FTP socket connected");
+            if (DEBUG_MODE) console.log("FTP socket connected");
             firstTask && firstTask();
-            self.connected = true;
             self.connecting = false;
         });
 
@@ -262,7 +261,6 @@ var Ftp = module.exports = function(cfg) {
         var NL = "\n";
         var buffer = [];
         var currentCode = 0;
-        var self = this;
 
         return function stream(next, stop) {
             source(function(data) {
@@ -285,7 +283,6 @@ var Ftp = module.exports = function(cfg) {
                             }
                         }
 
-                        console.log("RECEIVING", line);
                         next({ code: code, text: line });
                     }
                     else {
@@ -296,7 +293,6 @@ var Ftp = module.exports = function(cfg) {
                     }
 
                 }, this);
-                self.keepAlive();
             }, stop);
         };
     };
@@ -312,19 +308,14 @@ var Ftp = module.exports = function(cfg) {
      * @param action {Array} Contains server response and client command info.
      */
     this.parse = function(action) {
-        var ftpResponse = action[0];
-        var command     = action[1];
-
-        if (!command)
+        if (!action || !action[1])
             return;
 
-        var cmdName, callback;
-        if (command) {
-            cmdName  = command[0];
-            callback = command[1];
-        }
+        var ftpResponse = action[0];
+        var command  = action[1];
+        var cleanCmd = this._sanitize(command[0]);
+        var callback = command[1];
 
-        var cleanCmd = this._sanitize(cmdName);
         this.cmdListeners.forEach(function(listener) {
             listener(cleanCmd, ftpResponse);
         });
@@ -334,8 +325,7 @@ var Ftp = module.exports = function(cfg) {
             // Since the RFC is not respected by many servers, we are goiong to
             // overgeneralize and consider every value above 399 as an error.
             var hasFailed = ftpResponse && ftpResponse.code > 399;
-            var error = hasFailed && ftpResponse.text;
-            callback(error, ftpResponse);
+            callback(hasFailed && ftpResponse.text, ftpResponse);
         }
     };
 
@@ -406,7 +396,6 @@ var Ftp = module.exports = function(cfg) {
 
         this.features = null;
         this.tasks    = null;
-        this.connected = false;
         this.authenticated = false;
     };
 
@@ -421,13 +410,13 @@ var Ftp = module.exports = function(cfg) {
      * @param callback {Function} Follow-up function.
      */
     this.auth = function(user, pass, callback) {
+        var self = this;
         if (this.authenticating)
             return;
 
         if (!user) user = "anonymous";
         if (!pass) pass = "@anonymous";
 
-        var self = this;
         this.authenticating = true;
         //this._initialize(function() {
             self.raw.user(user, function(err, res) {
@@ -474,14 +463,13 @@ var Ftp = module.exports = function(cfg) {
         enqueue(this.pasvQueue, data);
     };
 
-    this.processPasv = function(pasvData, next) {
-        var self = this;
-
+    this.processPasv = function(data, next) {
         var callback = function(err, res) {
-            pasvData.callback && pasvData.callback(err, res);
+            data.callback && data.callback(err, res);
             next();
         };
 
+        var self = this;
         var doPasv = function doPasv() {
             self.raw.pasv(function(err, res) {
                 if (err || res.code !== 227)
@@ -489,15 +477,15 @@ var Ftp = module.exports = function(cfg) {
 
                 var match = RE_PASV.exec(res.text);
                 if (!match)
-                    return callback("PASV: Bad port ");
+                    return callback("PASV: Bad port");
 
                 var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
                 self.dataConn = new ftpPasv({
                     host: self.host,
                     port: port,
-                    mode: pasvData.mode,
+                    mode: data.mode,
                     callback: callback,
-                    onConnect: pasvData.onConnect,
+                    onConnect: data.onConnect,
                     ftp: self
                 });
             });
@@ -523,9 +511,8 @@ var Ftp = module.exports = function(cfg) {
             filePath = "";
         }
 
-        var self = this;
-
-        self.setPassive({
+        var self = this
+        this.setPassive({
             callback: callback,
             onConnect: function(socket) {
                 self.raw.list(filePath);
@@ -550,7 +537,7 @@ var Ftp = module.exports = function(cfg) {
 
     this.put = function(filePath, buffer, callback) {
         var self = this;
-        self.setPassive({
+        this.setPassive({
             mode: "I",
             callback: callback,
             onConnect: function(socket) {
@@ -589,7 +576,7 @@ var Ftp = module.exports = function(cfg) {
      *      otherPermissions: { read: true, write: false, exec: false }
      *  }
      *
-     * The constants used in the object are defined in ftp_parser.js
+     * The constants used in the object are defined in ftpParser.js
      *
      * @param filePath {String} Path to the file or directory to list
      * @param callback {Function} Function to call with the proper data when
@@ -628,20 +615,20 @@ var Ftp = module.exports = function(cfg) {
     };
 
     this.rename = function(from, to, callback) {
-        var raw = this.raw;
-        raw.rnfr(from, function(err, res) {
+        var self = this;
+        self.raw.rnfr(from, function(err, res) {
             if (err)
                 return callback(err);
 
-            raw.rnto(to, function(err, res) { callback(err, res); });
+            self.raw.rnto(to, function(err, res) { callback(err, res); });
         });
     };
 
     this.keepAlive = function() {
+        var self = this;
         if (this._keepAliveInterval)
             clearInterval(this._keepAliveInterval);
 
-        var self = this;
         this._keepAliveInterval = setInterval(self.raw.noop, IDLE_TIME);
     };
 
