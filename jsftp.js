@@ -587,7 +587,7 @@ var Ftp = module.exports = function(cfg) {
         this.raw.stat(filePath, function(err, data) {
             // We might be connected to a server that doesn't support the
             // 'STAT' command. We use 'LIST' instead.
-            if ((err && data.code === 502) ||
+            if ((err && (data.code === 502 || data.code === 500)) ||
                 (self.system && self.system.indexOf("hummingbird") > -1)) {
                 self.list(filePath, function(err, data) {
                     entriesToList(err, data);
