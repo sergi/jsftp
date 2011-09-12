@@ -330,7 +330,7 @@ var Ftp = module.exports = function(cfg) {
             // Since the RFC is not respected by many servers, we are goiong to
             // overgeneralize and consider every value above 399 as an error.
             var hasFailed = ftpResponse && ftpResponse.code > 399;
-            callback(hasFailed && ftpResponse.text, ftpResponse);
+            callback(hasFailed && (ftpResponse.text || "Unknown FTP error."), ftpResponse);
         }
     };
 
@@ -650,5 +650,4 @@ var Ftp = module.exports = function(cfg) {
     };
 
 }).call(Ftp.prototype);
-
 

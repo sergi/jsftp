@@ -157,7 +157,7 @@ module.exports = {
         });
     },
 
-    "!test ftp node stat": function(next) {
+    "test ftp node stat": function(next) {
         var ftp = this.ftp;
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
             ftp.raw.pwd(function(err, res) {
@@ -165,7 +165,7 @@ module.exports = {
                 var path = Path.resolve(parent + "/" + remoteCWD);
                 ftp.raw.stat(path, function(err, res) {
                     assert.ok(!err, res);
-                    assert.ok(res)
+                    assert.ok(res);
 
                     assert.ok(res.code === 211 || res.code === 212 || res.code === 213);
                     next();
@@ -178,6 +178,24 @@ module.exports = {
         var self = this;
 
         var newDir = remoteCWD + "/ftp_test_dir";
+        var ftp = this.ftp;
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            ftp.raw.mkd(newDir, function(err, res) {
+                assert.ok(!err);
+                assert.ok(res.code === 257);
+
+                ftp.raw.rmd(newDir, function(err, res) {
+                    assert.ok(!err);
+                    next();
+                });
+            });
+        });
+    },
+
+    "test create and delete a directory containing a space": function(next) {
+        var self = this;
+
+        var newDir = remoteCWD + "/ftp test dür";
         var ftp = this.ftp;
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
             ftp.raw.mkd(newDir, function(err, res) {
