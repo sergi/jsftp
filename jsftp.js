@@ -124,8 +124,6 @@ var Ftp = module.exports = function(cfg) {
         if (!command || typeof command != "string")
             return;
 
-        command = command.toLowerCase();
-
         function send() {
             cmd([command, callback]);
             socket.write(command + "\r\n");
@@ -551,10 +549,11 @@ var Ftp = module.exports = function(cfg) {
                         callback(err);
                 });
 
-                // We make sure that we close the socket AFTER the 'stor'
-                // command has been sent to the server.
+                // This would actually work without the setTimeout because FTP
+                // actually buffers anything written in the socket before doing
+                // the STOR. But we won't go around trusting other FTP servers.
                 setTimeout(function() {
-                    socket.end(buffer);
+                    socket.writable && socket.end(buffer);
                 }, 100);
             }
         });

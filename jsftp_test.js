@@ -65,6 +65,7 @@ module.exports = {
         var self = this;
         next();
         setTimeout(function() {
+            self.ftp.destroy();
             self.ftp = null;
             next();
         }, 200);
