@@ -206,9 +206,17 @@ var Ftp = module.exports = function(cfg) {
          */
         tasks = S.zip(S.filter(function(x) {
             // We ignore FTP marks for now. They don't convey useful
-            // information. A more elegant solution should be found int he
+            // information. A more elegant solution should be found in the
             // future.
-            return !isMark(x.code);
+            var mark = isMark(x.code);
+            /*
+            if (mark) {
+                self.cmdListeners.forEach(function(listener) {
+                    listener(null, x);
+                });
+            }
+            */
+            return !mark;
         }, self.serverResponse(input)), S.append(S.list(null), cmds));
 
         tasks(self.parse.bind(self), function(err) {
@@ -314,13 +322,13 @@ var Ftp = module.exports = function(cfg) {
         if (!action || !action[1])
             return;
 
+        var self = this;
         var ftpResponse = action[0];
         var command  = action[1];
-        var cleanCmd = this._sanitize(command[0]);
         var callback = command[1];
 
-        this.cmdListeners.forEach(function(listener) {
-            listener(cleanCmd, ftpResponse);
+        self.cmdListeners.forEach(function(listener) {
+            listener(self._sanitize(command[0]), ftpResponse);
         });
 
         if (callback) {
@@ -359,8 +367,8 @@ var Ftp = module.exports = function(cfg) {
         if (!cmd)
             return;
 
-        var _cmd = cmd.slice(0, 5).toUpperCase();
-        if (_cmd === "PASS ")
+        var _cmd = cmd.slice(0, 5);
+        if (_cmd === "pass ")
             cmd = _cmd + Array(cmd.length - 5).join("*");
 
         return cmd;
@@ -412,8 +420,18 @@ var Ftp = module.exports = function(cfg) {
      * @param pass {String} Password
      * @param callback {Function} Follow-up function.
      */
+     
+    this.pendingRequests = [];
     this.auth = function(user, pass, callback) {
         var self = this;
+        this.pendingRequests.push(callback);
+
+        function notifyAll(err, res) {
+            var cb;
+            while (cb = self.pendingRequests.shift())
+                cb(err, res);
+        }
+
         if (this.authenticating)
             return;
 
@@ -436,18 +454,18 @@ var Ftp = module.exports = function(cfg) {
                                 if (!err && res.code === 215)
                                     self.system = res.text.toLowerCase();
                             });
-                            callback(null, res);
+                            notifyAll(null, res);
                         }
                         else if (res.code === 332) {
                             self.raw.acct(""); // ACCT not really supported
                         }
                         else {
-                            callback(new Error("Login not accepted"));
+                            notifyAll(new Error("Login not accepted"));
                         }
                     });
                 } else {
                     self.authenticating = false;
-                    callback(new Error("Login not accepted"));
+                    notifyAll(new Error("Login not accepted"));
                 }
             });
         //});

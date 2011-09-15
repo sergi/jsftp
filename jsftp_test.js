@@ -345,7 +345,21 @@ module.exports = {
                 });
             });
         });
+    },
+    "test stat and pasv calls in parallel": function(next) {
+        var ftp = this.ftp;
+
+        ftp.ls("/", handler);
+        ftp.ls("/", handler);
+
+        var count = 0;
+        function handler(err, res) {
+            assert.ok(err== null);
+            if (++count == 2)
+                next();
+        }
     }
+
 };
 
 !module.parent && require("asyncjs").test.testcase(module.exports, "FTP").exec();
