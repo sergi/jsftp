@@ -420,8 +420,18 @@ var Ftp = module.exports = function(cfg) {
      * @param pass {String} Password
      * @param callback {Function} Follow-up function.
      */
+     
+    this.pendingRequests = [];
     this.auth = function(user, pass, callback) {
         var self = this;
+        this.pendingRequests.push(callback);
+
+        function notifyAll(err, res) {
+            var cb;
+            while (cb = self.pendingRequests.shift())
+                cb(err, res);
+        }
+
         if (this.authenticating)
             return;
 
@@ -444,18 +454,18 @@ var Ftp = module.exports = function(cfg) {
                                 if (!err && res.code === 215)
                                     self.system = res.text.toLowerCase();
                             });
-                            callback(null, res);
+                            notifyAll(null, res);
                         }
                         else if (res.code === 332) {
                             self.raw.acct(""); // ACCT not really supported
                         }
                         else {
-                            callback(new Error("Login not accepted"));
+                            notifyAll(new Error("Login not accepted"));
                         }
                     });
                 } else {
                     self.authenticating = false;
-                    callback(new Error("Login not accepted"));
+                    notifyAll(new Error("Login not accepted"));
                 }
             });
         //});
