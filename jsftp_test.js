@@ -346,6 +346,45 @@ module.exports = {
             });
         });
     },
+    ">test multiple concurrent pasvs": function(next) {
+        var ftp = this.ftp;
+        var file1 = "testfile1.txt";
+        var file2 = "testfile2.txt";
+        var file3 = "testfile3.txt";
+
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+            ftp.raw.pwd(function(err, res) {
+                var parent, pathDir, path1, path2, path3;
+                if (remoteCWD.charAt(0) !== "/") {
+                    parent = /.*"(.*)".*/.exec(res.text)[1];
+                    pathDir = Path.resolve(parent + "/" + remoteCWD);
+                    path1 = Path.resolve(pathDir + "/" + file1);
+                    path2 = Path.resolve(pathDir + "/" + file2);
+                    path3 = Path.resolve(pathDir + "/" + file3);
+                }
+                else {
+                    pathDir = remoteCWD;
+                    path1 = Path.resolve(remoteCWD + "/" + file1);
+                    path2 = Path.resolve(remoteCWD + "/" + file2);
+                    path3 = Path.resolve(remoteCWD + "/" + file3);
+                }
+
+                ftp.put(path1, new Buffer("test"), handler);
+
+                ftp.put(path2, new Buffer("test"), handler);
+
+                ftp.put(path3, new Buffer("test"), handler);
+
+                var count = 0;
+                function handler(err, res) {
+                    assert.ok(err== null);
+                    console.log(count)
+                    if (++count == 3)
+                        next();
+                }
+            });
+        });
+    },
     "test stat and pasv calls in parallel": function(next) {
         var ftp = this.ftp;
 
