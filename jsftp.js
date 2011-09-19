@@ -124,8 +124,9 @@ var Ftp = module.exports = function(cfg) {
         if (!command || typeof command != "string")
             return;
 
+        var self = this;
         function send() {
-            cmd([command, callback]);
+            enqueue(self.cmdQueue, [command, callback]);
             socket.write(command + "\r\n");
         }
 
@@ -134,10 +135,12 @@ var Ftp = module.exports = function(cfg) {
         var isAuthCmd = /feat.*/.test(command) || /user.*/.test(command) || /pass.*/.test(command);
 
         if (socket.writable) {
-            if (!this.authenticated && !isAuthCmd)
+            if ((this.authenticating || !this.authenticated) && !isAuthCmd) {
                 self.auth(user, pass, send);
-            else
+            }
+            else {
                 send();
+            }
         }
         else {
             if (DEBUG_MODE)
@@ -176,14 +179,12 @@ var Ftp = module.exports = function(cfg) {
 
     var cmds, tasks;
     var createStreams = function() {
-        /*
         self.cmdQueue = queue();
         (self.nextCmd = function nextCmd() {
             S.head(self.cmdQueue)(function(obj) {
-                self.push(obj, self.nextCmd);
+                cmd(obj, self.nextCmd);
             });
         })();
-        */
 
         self.pasvQueue = queue();
         (self.nextPasv = function nextPasv() {
@@ -338,6 +339,7 @@ var Ftp = module.exports = function(cfg) {
             var hasFailed = ftpResponse && ftpResponse.code > 399;
             callback(hasFailed && (ftpResponse.text || "Unknown FTP error."), ftpResponse);
         }
+        this.nextCmd();
     };
 
     this._initialize = function(callback) {
@@ -420,7 +422,6 @@ var Ftp = module.exports = function(cfg) {
      * @param pass {String} Password
      * @param callback {Function} Follow-up function.
      */
-     
     this.pendingRequests = [];
     this.auth = function(user, pass, callback) {
         var self = this;
