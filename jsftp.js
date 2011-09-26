@@ -22,7 +22,7 @@ var RE_MULTI = /^(\d\d\d)-/;
 var RE_NL_END = /\r\n$/;
 var RE_NL = /\r\n/;
 
-var DEBUG_MODE = false;
+var DEBUG_MODE = true;
 var TIMEOUT = 60000;
 var IDLE_TIME = 30000;
 var COMMANDS = [
@@ -35,6 +35,7 @@ var COMMANDS = [
     "SYST", "CHMOD", "SIZE"
 ];
 
+// Queue function that maintains an ordered queue of streams.
 function queue() {
     var next;
     var buffer = slice.call(arguments);
@@ -56,8 +57,10 @@ function queue() {
     return stream;
 }
 
+// Enqueues an `element` in the `stream` object, which has to be a reference to
+// a queue.
 function enqueue(stream, element) {
-   stream._update.apply(null, slice.call(arguments, 1));
+    stream._update.apply(null, slice.call(arguments, 1));
 }
 
 // Codes from 100 to 200 are FTP marks
@@ -101,7 +104,24 @@ var Ftp = module.exports = function(cfg) {
             }
 
             self.keepAlive();
-            self.push(action, callback);
+
+            // Check whether the FTP user is authenticated at the moment of the
+            // enqueing. Ideally this should happen in the `push` method, just
+            // before writing to the socket, but that would be complicated,
+            // since we would have to 'unshift' the auth chain into the queue
+            // or play the raw auth commands (that is, without enqueuing in
+            // order to not mess up the queue order. Ideally, that would be
+            // built into the queue object. All this explanation to justify a
+            // slight slopiness in the code flow.
+            var isAuthCmd = /feat|user|pass/.test(action);
+            if ((this.authenticating || !this.authenticated) && !isAuthCmd) {
+                self.auth(self.options.user, self.options.pass, function() {
+                    enqueue(self.cmdQueue, [action, callback]);
+                });
+            }
+            else {
+                enqueue(self.cmdQueue, [action, callback]);
+            }
         };
     });
 
@@ -115,32 +135,24 @@ var Ftp = module.exports = function(cfg) {
 
     var socket = this._createSocket(this.port, this.host);
     var cmd;
-    /**
-     * Writes a new command to the server, but before that it pushes the
-     * command into `cmds` list. This command will get paired with its response
-     * once that one is received
-     */
-    this.push = function(command, callback) {
+
+    // Writes a new command to the server, but before that it pushes the
+    // command into `cmds` list. This command will get paired with its response
+    // once that one is received
+    this.push = function(command, callback, onWriteCallback) {
         if (!command || typeof command != "string")
             return;
 
         var self = this;
         function send() {
-            enqueue(self.cmdQueue, [command, callback]);
             socket.write(command + "\r\n");
+
+            if (onWriteCallback)
+                onWriteCallback();
         }
 
-        var user = this.options.user;
-        var pass = this.options.pass;
-        var isAuthCmd = /feat.*/.test(command) || /user.*/.test(command) || /pass.*/.test(command);
-
         if (socket.writable) {
-            if ((this.authenticating || !this.authenticated) && !isAuthCmd) {
-                self.auth(user, pass, send);
-            }
-            else {
-                send();
-            }
+            send();
         }
         else {
             if (DEBUG_MODE)
@@ -150,11 +162,8 @@ var Ftp = module.exports = function(cfg) {
                 this.connecting = true;
 
                 var reConnect = function() {
-                    self.auth(user, pass, function(err, data) {
-                        self.connecting = false;
-                        if (!err && !isAuthCmd)
-                            send();
-                    });
+                    self.connecting = false;
+                    !err && send();
                 };
 
                 try {
@@ -178,20 +187,12 @@ var Ftp = module.exports = function(cfg) {
     };
 
     var cmds, tasks;
-    var createStreams = function() {
+    var createStreams = this.createStreams = function() {
         self.cmdQueue = queue();
         (self.nextCmd = function nextCmd() {
             S.head(self.cmdQueue)(function(obj) {
                 cmd(obj, self.nextCmd);
-            });
-        })();
-
-        self.pasvQueue = queue();
-        (self.nextPasv = function nextPasv() {
-            // Take first element from `pasvQueue` and process it via `processElement` black box that will call
-            // `recur` once it's done to process next element from the `pasvQueue` queue.
-            S.head(self.pasvQueue)(function(element) {
-                self.processPasv(element, self.nextPasv);
+                self.push(obj[0], obj[1], obj[2] || null);
             });
         })();
 
@@ -477,49 +478,41 @@ var Ftp = module.exports = function(cfg) {
      * a data port where we can listen to passive data. The callback is called
      * when the passive socket closes its connection.
      *
-     * @param mode {String} String that specifies binary or non-binary mode ("I or "A")
-     * @param callback {Function} Function to call when socket has received all the data
-     * @param onConnect {Function} Function to call when the passive socket connects
+     * @param data {Object} Object with the following properties:
+     *
+     *  mode {String}, optional: "I" or "A", referring to binary or text format, respectively. Default is binary.,
+     *  cmd {String}: String of the command to execute,
+     *  onCmdWrite {function}, optional: Function to execute just after writing the command to the socket.
+     *  pasvCallback {function}, optional: Function to execute when the data socket closes (either by success or by error).
      */
     this.setPassive = function(data) {
-        enqueue(this.pasvQueue, data);
-    };
-
-    this.processPasv = function(data, next) {
-        var callback = function(err, res) {
-            data.callback && data.callback(err, res);
-            next();
-        };
-
         var self = this;
-        var doPasv = function doPasv() {
-            self.raw.pasv(function(err, res) {
-                if (err || res.code !== 227)
-                    return callback(res.text);
+        var callback = data.pasvCallback;
 
-                var match = RE_PASV.exec(res.text);
-                if (!match)
-                    return callback("PASV: Bad port");
+        var doPasv = function(err, res) {
+            if (err || res.code !== 227)
+                return callback(res.text);
 
-                var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-                self.dataConn = new ftpPasv({
-                    host: self.host,
-                    port: port,
-                    mode: data.mode,
-                    callback: callback,
-                    onConnect: data.onConnect,
-                    ftp: self
-                });
+            var match = RE_PASV.exec(res.text);
+            if (!match)
+                return callback("PASV: Bad port");
+
+            var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
+            self.dataConn = new ftpPasv({
+                host: self.host,
+                port: port,
+                mode: data.mode,
+                callback: callback,
+                ftp: self
             });
         };
 
-        if (this.dataConn && this.dataConn.writable) {
-            this.dataConn.on("close", doPasv);
-            this.dataConn.end();
-        }
-        else {
-            doPasv();
-        }
+        // Make sure to set the desired mode before starting any passive
+        // operation.
+        this.raw.type(data.mode || "I", function(err, res) {
+            enqueue(self.cmdQueue, ["pasv", doPasv]);
+            enqueue(self.cmdQueue, [data.cmd, null, data.onCmdWrite]);
+        });
     };
 
     /**
@@ -535,10 +528,8 @@ var Ftp = module.exports = function(cfg) {
 
         var self = this
         this.setPassive({
-            callback: callback,
-            onConnect: function(socket) {
-                self.raw.list(filePath);
-            }
+            cmd: "list " + filePath,
+            pasvCallback: callback,
         });
     };
 
@@ -550,10 +541,8 @@ var Ftp = module.exports = function(cfg) {
         var self = this;
         self.setPassive({
             mode: "I",
-            callback: callback,
-            onConnect: function(socket) {
-                self.raw.retr(filePath);
-            }
+            cmd: "retr " + filePath,
+            pasvCallback: callback,
         });
     };
 
@@ -561,20 +550,17 @@ var Ftp = module.exports = function(cfg) {
         var self = this;
         this.setPassive({
             mode: "I",
-            callback: callback,
-            onConnect: function(socket) {
-                self.raw.stor(filePath, function(err, res) {
-                    if (err)
-                        callback(err);
-                });
-
+            cmd: "stor " + filePath,
+            onCmdWrite: function() {
+                var socket = self.dataConn.socket;
                 // This would actually work without the setTimeout because FTP
                 // actually buffers anything written in the socket before doing
-                // the STOR. But we won't go around trusting other FTP servers.
+                // the STOR. But we won't go around trusting weird FTP servers.
                 setTimeout(function() {
                     socket.writable && socket.end(buffer);
                 }, 100);
-            }
+            },
+            pasvCallback: callback
         });
     };
 
