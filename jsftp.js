@@ -22,7 +22,7 @@ var RE_MULTI = /^(\d\d\d)-/;
 var RE_NL_END = /\r\n$/;
 var RE_NL = /\r\n/;
 
-var DEBUG_MODE = true;
+var DEBUG_MODE = false;
 var TIMEOUT = 60000;
 var IDLE_TIME = 30000;
 var COMMANDS = [
