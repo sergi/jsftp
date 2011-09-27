@@ -114,7 +114,7 @@ var Ftp = module.exports = function(cfg) {
             // built into the queue object. All this explanation to justify a
             // slight slopiness in the code flow.
             var isAuthCmd = /feat|user|pass/.test(action);
-            if ((this.authenticating || !this.authenticated) && !isAuthCmd) {
+            if ((self.authenticating || !self.authenticated) && !isAuthCmd) {
                 self.auth(self.options.user, self.options.pass, function() {
                     enqueue(self.cmdQueue, [action, callback]);
                 });
@@ -146,6 +146,14 @@ var Ftp = module.exports = function(cfg) {
         var self = this;
         function send() {
             socket.write(command + "\r\n");
+
+            self.cmdListeners.forEach(function(listener) {
+                listener({
+                    type: "command",
+                    code: "",
+                    text: self._sanitize(command)
+                });
+            });
 
             if (onWriteCallback)
                 onWriteCallback();
@@ -222,12 +230,9 @@ var Ftp = module.exports = function(cfg) {
         }, self.serverResponse(input)), S.append(S.list(null), cmds));
 
         tasks(self.parse.bind(self), function(err) {
-            if (DEBUG_MODE)
-                console.log("Ftp socket closed its doors to the public.", err || "");
-            if (err && self.onError)
-                self.onError(err);
-
-            self.destroy();
+            if (DEBUG_MODE) {
+                console.log("Ftp socket closed its doors to the public.");
+            }
         });
     };
 
@@ -271,6 +276,7 @@ var Ftp = module.exports = function(cfg) {
      * the server belong to a single command.
      */
     this.serverResponse = function(source) {
+        var self = this;
         var NL = "\n";
         var buffer = [];
         var currentCode = 0;
@@ -296,6 +302,13 @@ var Ftp = module.exports = function(cfg) {
                             }
                         }
 
+                        self.cmdListeners.forEach(function(listener) {
+                            listener({
+                                type: "response",
+                                code: code,
+                                text: line
+                            });
+                        });
                         next({ code: code, text: line });
                     }
                     else {
@@ -329,10 +342,6 @@ var Ftp = module.exports = function(cfg) {
         var command  = action[1];
         var callback = command[1];
 
-        self.cmdListeners.forEach(function(listener) {
-            listener(self._sanitize(command[0]), ftpResponse);
-        });
-
         if (callback) {
             // In FTP every response code above 399 means error in some way.
             // Since the RFC is not respected by many servers, we are goiong to
@@ -355,8 +364,8 @@ var Ftp = module.exports = function(cfg) {
         });
     };
 
-    this._log = function(cmd, response) {
-        console.log("\n" + (cmd || "") + "\n" + response.text);
+    this._log = function(msg) {
+        console.log("\n" + msg.text);
     };
 
     /**
