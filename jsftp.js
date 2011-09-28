@@ -114,7 +114,7 @@ var Ftp = module.exports = function(cfg) {
             // built into the queue object. All this explanation to justify a
             // slight slopiness in the code flow.
             var isAuthCmd = /feat|user|pass/.test(action);
-            if ((self.authenticating || !self.authenticated) && !isAuthCmd) {
+            if (!self.authenticated && !isAuthCmd) {
                 self.auth(self.options.user, self.options.pass, function() {
                     enqueue(self.cmdQueue, [action, callback]);
                 });
@@ -562,12 +562,7 @@ var Ftp = module.exports = function(cfg) {
             cmd: "stor " + filePath,
             onCmdWrite: function() {
                 var socket = self.dataConn.socket;
-                // This would actually work without the setTimeout because FTP
-                // actually buffers anything written in the socket before doing
-                // the STOR. But we won't go around trusting weird FTP servers.
-                setTimeout(function() {
-                    socket.writable && socket.end(buffer);
-                }, 100);
+                socket.writable && socket.end(buffer);
             },
             pasvCallback: callback
         });

@@ -361,7 +361,6 @@ module.exports = {
         var file3 = "testfile3.txt";
 
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
-            console.log("got to atu")
             ftp.raw.pwd(function(err, res) {
                 var parent, pathDir, path1, path2, path3;
                 if (remoteCWD.charAt(0) !== "/") {
@@ -386,9 +385,7 @@ module.exports = {
 
                 var count = 0;
                 function handler(err, res) {
-                    console.log(err)
                     assert.ok(err == null);
-                    console.log(count)
                     if (++count == 3)
                         next();
                 }
