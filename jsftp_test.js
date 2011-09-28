@@ -63,7 +63,6 @@ module.exports = {
         }
 
         var self = this;
-        next();
         setTimeout(function() {
             self.ftp.destroy();
             self.ftp = null;
@@ -252,6 +251,7 @@ module.exports = {
                     ftp.rename(from, to, function(err, res) {
                         ftp.ls(to, function(err, res) {
                             assert.ok(!err);
+
                             assert.equal(buffer.length, Fs.statSync(CWD + "/jsftp_test.js").size);
 
                             ftp.raw.dele(to, function(err, data) {
@@ -266,18 +266,21 @@ module.exports = {
     },
 
     "test get a file": function(next) {
-        var filePath = CWD + "/jsftp_test.js";
         var ftp = this.ftp;
+        var fileName = "jsftp_test.js";
+        var localPath = CWD + "/" + fileName;
+        var remotePath = remoteCWD + "/" + fileName;
+
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
-            Fs.readFile(filePath, "binary", function(err, data) {
+            Fs.readFile(localPath, "binary", function(err, data) {
                 var buffer = new Buffer(data, "binary");
-                ftp.put(remoteCWD + "/test_get.js", buffer, function(err, res) {
+                ftp.put(remotePath, buffer, function(err, res) {
                     assert.ok(!err, err);
-                    ftp.get(remoteCWD + "/test_get.js", function(err, data) {
+                    ftp.get(remotePath, function(err, data) {
                         assert.ok(!err, err);
 
                         assert.equal(buffer.length, data.length);
-                        ftp.raw.dele(remoteCWD + "/test_get.js", function(err, data) {
+                        ftp.raw.dele(remotePath, function(err, data) {
                             assert.ok(!err);
                             next();
                         });
@@ -289,22 +292,27 @@ module.exports = {
 
     "test get two files synchronously": function(next) {
         var ftp = this.ftp;
-        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
-            ftp.get(remoteCWD + "/testfile.txt", function(err, data) {
-                        assert.ok(!err, err);
-                        assert.ok(data);
-                });
-            ftp.get(remoteCWD + "/testfile.txt", function(err, data) {
-                        assert.ok(!err, err);
-                        assert.ok(data);
-                    });
-            ftp.get(remoteCWD + "/testfile.txt", function(err, data) {
-                        assert.ok(!err, err);
-                        assert.ok(data);
-                        next()
+        var filePath = remoteCWD + "/testfile.txt";
+        var counter = 0;
 
-                    });
+        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+
+            ftp.put(filePath, new Buffer("test"), handler);
+            ftp.get(filePath, function(err, data) {
+                assert.ok(!err, err);
+                assert.ok(data);
+            });
+
+            ftp.put(filePath, new Buffer("test"), handler);
+            ftp.get(filePath, function(err, data) {
+                    assert.ok(!err, err);
+                    assert.ok(data);
+                    assert.ok(counter == 2);
+                    next()
                 });
+            });
+
+            function handler() { counter++; };
     },
 
     "test get fileList array": function(next) {
@@ -346,7 +354,7 @@ module.exports = {
             });
         });
     },
-    ">test multiple concurrent pasvs": function(next) {
+    "test multiple concurrent pasvs": function(next) {
         var ftp = this.ftp;
         var file1 = "testfile1.txt";
         var file2 = "testfile2.txt";
@@ -377,24 +385,28 @@ module.exports = {
 
                 var count = 0;
                 function handler(err, res) {
-                    assert.ok(err== null);
-                    console.log(count)
+                    assert.ok(err == null);
                     if (++count == 3)
                         next();
                 }
             });
         });
     },
-    "test stat and pasv calls in parallel": function(next) {
+    "test stat and pasv calls in parallel without auth": function(next) {
         var ftp = this.ftp;
 
+        ftp.raw.cwd("/", handler);
+        ftp.raw.pwd(handler);
+
+        ftp.ls("/", handler);
+        ftp.ls("/", handler);
         ftp.ls("/", handler);
         ftp.ls("/", handler);
 
         var count = 0;
         function handler(err, res) {
-            assert.ok(err== null);
-            if (++count == 2)
+            assert.ok(!err);
+            if (++count == 6)
                 next();
         }
     }
