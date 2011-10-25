@@ -5,6 +5,8 @@
  * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
  */
 
+"use strict";
+
 var assert = require("assert");
 var Fs = require("fs");
 var exec = require('child_process').spawn;
@@ -15,10 +17,10 @@ var Path = require("path");
 // FTP server. If you want to test against a remote server, simply change the
 // `host` and `port` properties as well.
 var FTPCredentials = {
-    host: "",
-    user: "",
+    host: "sergimansilla.com",
+    user: "fjakobs",
     port: 21,
-    pass: ""
+    pass: "kzg241"
 };
 
 var CWD = process.cwd();
