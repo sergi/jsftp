@@ -5,6 +5,8 @@
  * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
  */
 
+"use strict";
+
 var S;
 var Net = require("net");
 var ftpPasv = require("./lib/ftpPasv");
@@ -36,7 +38,7 @@ var COMMANDS = [
 ];
 
 // Queue function that maintains an ordered queue of streams.
-function queue() {
+var queue = function queue() {
     var next;
     var buffer = slice.call(arguments);
 
@@ -59,12 +61,12 @@ function queue() {
 
 // Enqueues an `element` in the `stream` object, which has to be a reference to
 // a queue.
-function enqueue(stream, element) {
+var enqueue = function enqueue(stream, element) {
     stream._update.apply(null, slice.call(arguments, 1));
 }
 
 // Codes from 100 to 200 are FTP marks
-function isMark(code) {
+var isMark = function isMark(code) {
     return code > 100 && code < 200;
 };
 
