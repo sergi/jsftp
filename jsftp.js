@@ -42,10 +42,10 @@ var queue = function queue() {
     var next;
     var buffer = slice.call(arguments);
 
-    function stream($, stop) {
+    var stream = function stream($, stop) {
         next = $;
         stream._update();
-    }
+    };
 
     stream._update = function _update() {
         buffer.push.apply(buffer, arguments);
@@ -57,13 +57,13 @@ var queue = function queue() {
         }
     };
     return stream;
-}
+};
 
 // Enqueues an `element` in the `stream` object, which has to be a reference to
 // a queue.
 var enqueue = function enqueue(stream, element) {
     stream._update.apply(null, slice.call(arguments, 1));
-}
+};
 
 // Codes from 100 to 200 are FTP marks
 var isMark = function isMark(code) {
@@ -339,7 +339,6 @@ var Ftp = module.exports = function(cfg) {
         if (!action || !action[1])
             return;
 
-        var self = this;
         var ftpResponse = action[0];
         var command  = action[1];
         var callback = command[1];
@@ -537,10 +536,9 @@ var Ftp = module.exports = function(cfg) {
             filePath = "";
         }
 
-        var self = this
         this.setPassive({
             cmd: "list " + filePath,
-            pasvCallback: callback,
+            pasvCallback: callback
         });
     };
 
