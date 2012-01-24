@@ -342,13 +342,19 @@ var Ftp = module.exports = function(cfg) {
         var ftpResponse = action[0];
         var command  = action[1];
         var callback = command[1];
+        var err;
 
         if (callback) {
             // In FTP every response code above 399 means error in some way.
             // Since the RFC is not respected by many servers, we are goiong to
             // overgeneralize and consider every value above 399 as an error.
-            var hasFailed = ftpResponse && ftpResponse.code > 399;
-            callback(hasFailed && (ftpResponse.text || "Unknown FTP error."), ftpResponse);
+            if (ftpResponse && ftpResponse.code > 399) {
+            	err = new Error(ftpResponse.text || "Unknown FTP error.")
+            	err.code = ftpResponse.code;
+            	callback(err);
+            } else {
+            	callback(null, ftpResponse);
+            }
         }
         this.nextCmd();
     };
@@ -453,11 +459,11 @@ var Ftp = module.exports = function(cfg) {
         this.authenticating = true;
         //this._initialize(function() {
             self.raw.user(user, function(err, res) {
-                if ([230, 331, 332].indexOf(res.code) > -1) {
+                if (!err && [230, 331, 332].indexOf(res.code) > -1) {
                     self.raw.pass(pass, function(err, res) {
                         self.authenticating = false;
 
-                        if ([230, 202].indexOf(res.code) > -1) {
+                        if (!err && [230, 202].indexOf(res.code) > -1) {
                             self.authenticated = true;
                             self.user = user;
                             self.pass = pass;
@@ -468,7 +474,7 @@ var Ftp = module.exports = function(cfg) {
                             });
                             notifyAll(null, res);
                         }
-                        else if (res.code === 332) {
+                        else if (!err && res.code === 332) {
                             self.raw.acct(""); // ACCT not really supported
                         }
                         else {
