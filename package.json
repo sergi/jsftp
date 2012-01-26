@@ -14,7 +14,7 @@
     "web": "https://github.com/sergi/jsftp/issues"
   },
   "dependencies": {
-    "streamer": "=0.0.4"
+    "streamer": "0.2.x"
   },
   "devDependencies": {
     "asyncjs": ">=0.0.5"
