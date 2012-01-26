@@ -17,10 +17,10 @@ var Path = require("path");
 // FTP server. If you want to test against a remote server, simply change the
 // `host` and `port` properties as well.
 var FTPCredentials = {
-    host: "sergimansilla.com",
-    user: "fjakobs",
+    host: "",
+    user: "",
     port: 21,
-    pass: "kzg241"
+    pass: ""
 };
 
 var CWD = process.cwd();
