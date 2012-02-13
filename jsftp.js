@@ -5,8 +5,6 @@
  * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
  */
 
-"use strict";
-
 var S;
 var Net = require("net");
 var ftpPasv = require("./lib/ftpPasv");
@@ -71,6 +69,7 @@ var isMark = function isMark(code) {
 };
 
 var Ftp = module.exports = function(cfg) {
+    "use strict";
     this.raw = {};
     this.options = cfg;
     // This variable will be true if the server doesn't support the `stat`
@@ -243,7 +242,7 @@ var Ftp = module.exports = function(cfg) {
 };
 
 (function() {
-
+    "use strict";
     this.addCmdListener = function(listener) {
         if (this.cmdListeners.indexOf(listener) === -1)
             this.cmdListeners.push(listener);
@@ -551,7 +550,7 @@ var Ftp = module.exports = function(cfg) {
         self.setPassive({
             mode: "I",
             cmd: "retr " + filePath,
-            pasvCallback: callback,
+            pasvCallback: callback
         });
     };
 
@@ -562,7 +561,8 @@ var Ftp = module.exports = function(cfg) {
             cmd: "stor " + filePath,
             onCmdWrite: function() {
                 var socket = self.dataConn.socket;
-                socket.writable && socket.end(buffer);
+                if (socket.writable)
+                    socket.end(buffer);
             },
             pasvCallback: callback
         });
@@ -596,6 +596,24 @@ var Ftp = module.exports = function(cfg) {
      * the listing is finished.
      */
     this.ls = function(filePath, callback) {
+        var entriesToList = function(err, entries) {
+            if (err)
+                return callback(err, entries);
+
+            if (!entries)
+                return callback(null, []);
+
+            callback(null,
+                (entries.text || entries)
+                    .split(/\r\n|\n/)
+                    .map(function(entry) {
+                        return Parser.entryParser(entry.replace("\n", ""));
+                    })
+                    // Flatten the array
+                    .filter(function(value){ return !!value; })
+            );
+        };
+        
         if (this.useList) {
             this.list(filePath, entriesToList);
         }
@@ -620,23 +638,7 @@ var Ftp = module.exports = function(cfg) {
             });
         }
 
-        function entriesToList(err, entries) {
-            if (err)
-                return callback(err, entries);
-
-            if (!entries)
-                return callback(null, []);
-
-            callback(null,
-                (entries.text || entries)
-                    .split(/\r\n|\n/)
-                    .map(function(entry) {
-                        return Parser.entryParser(entry.replace("\n", ""));
-                    })
-                    // Flatten the array
-                    .filter(function(value){ return !!value; })
-            );
-        }
+        
     };
 
     this.rename = function(from, to, callback) {
