@@ -173,7 +173,7 @@ var Ftp = module.exports = function(cfg) {
 
                 var reConnect = function() {
                     self.connecting = false;
-                    !err && send();
+                    send();
                 };
 
                 try {
