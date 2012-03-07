@@ -7,13 +7,10 @@
 
 "use strict";
 
-var S;
 var Net = require("net");
 var ftpPasv = require("./lib/ftpPasv");
 var Parser = require('./lib/ftpParser');
-
-try { S = require("streamer"); }
-catch (e) { S = require("./support/streamer/core"); }
+var S = require("streamer");
 
 var slice = Array.prototype.slice;
 

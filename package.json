@@ -11,13 +11,13 @@
     "url": "https://github.com/sergi/jsftp.git"
   },
   "bugs": {
-    "web": "https://github.com/sergi/jsftp/issues"
+    "url": "https://github.com/sergi/jsftp/issues"
   },
   "dependencies": {
-    "streamer": "=0.0.4"
+    "streamer": "~0.2.1"
   },
   "devDependencies": {
-    "asyncjs": ">=0.0.5"
+    "asyncjs": "~0.0.5"
   },
   "main": "./jsftp.js",
   "engines": {

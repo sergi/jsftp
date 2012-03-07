@@ -1,3 +1,5 @@
 *.swp
 *~
 *.bak
+node_modules/
+testfile*.txt
