@@ -138,10 +138,13 @@ module.exports = {
                 });
 
                 ftp.raw.cwd("/unexistentDir/", function(err, res) {
-                    assert.ok(err);
-
-                    code = parseInt(res.code, 10);
-                    assert.ok(code === 550, "A (wrong) CWD command was successful. It should have failed");
+                	  if (err)
+                	  	  assert.ok(err);
+                	  else {
+                        code = parseInt(res.code, 10);
+                        assert.ok(code === 550, "A (wrong) CWD command was successful. It should have failed");
+                	  }
+                	  
                     next();
                 });
             });
