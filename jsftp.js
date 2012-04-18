@@ -101,7 +101,10 @@ var Ftp = module.exports = function(cfg) {
                     action += " " + args.join(" ");
             }
 
-            self.keepAlive();
+            if (lcCmd === "quit" && self._keepAliveInterval)
+                clearInterval(self._keepAliveInterval);
+            else
+                self.keepAlive();
 
             // Check whether the FTP user is authenticated at the moment of the
             // enqueing. Ideally this should happen in the `push` method, just
