@@ -1,0 +1,245 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>jsftp by sergi</title>
+    
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>jsftp</h1>
+        <p>jsftp is a sane and lightweight client implementation of the FTP protocol in JavaScript</p>
+        <p class="view"><a href="https://github.com/sergi/jsftp">View the Project on GitHub <small>sergi/jsftp</small></a></p>
+        <ul>
+          <li><a href="https://github.com/sergi/jsftp/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/sergi/jsftp/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/sergi/jsftp">Fork On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <p>jsftp is a client FTP module for NodeJS that focuses on correctness, clarity and conciseness. It doesn't get in the middle of the user intentions.</p>
+
+<p>jsftp gives the user access to all the raw commands of FTP in form of methods in the <code>Ftp</code> object. It also provides convenience methods for actions that require complex chains of commands (e.g. uploading and retrieving files).</p>
+
+<p>When commands succeed they always pass the response of the server to the callback in the form of an object that contains two properties: <code>code</code>, which is the response code of the FTP operation, and <code>text</code>, which is the complete text of the response.</p>
+
+<p>Raw (or native) commands are accessible in the form <code>Ftp.raw.desired_command(params, callback)</code></p>
+
+<p>Thus, an ftp command like <code>QUIT</code> will be called like:</p>
+
+<div class="highlight">
+<pre><span class="nx">Ftp</span><span class="p">.</span><span class="nx">raw</span><span class="p">.</span><span class="nx">quit</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+        <span class="k">throw</span> <span class="nx">err</span><span class="p">;</span>
+
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Bye!"</span><span class="p">);</span>
+<span class="p">});</span>
+</pre>
+</div>
+
+
+<p>and a command like <code>MKD</code> (make directory) which accepts parameters, will look like this:</p>
+
+<div class="highlight">
+<pre><span class="nx">Ftp</span><span class="p">.</span><span class="nx">raw</span><span class="p">.</span><span class="nx">mkd</span><span class="p">(</span><span class="s2">"/new_dir"</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+        <span class="k">throw</span> <span class="nx">err</span><span class="p">;</span>
+
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span> <span class="c1">// Print FTP response</span>
+<span class="p">});</span>
+</pre>
+</div>
+
+
+<h2>Usage examples</h2>
+
+<div class="highlight">
+<pre><span class="c1">// Initialize some common variables</span>
+<span class="kd">var</span> <span class="nx">user</span> <span class="o">=</span> <span class="s2">"johndoe"</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">pass</span> <span class="o">=</span> <span class="s2">"12345"</span><span class="p">;</span>
+
+<span class="kd">var</span> <span class="nx">ftp</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Ftp</span><span class="p">({</span>
+    <span class="nx">host</span><span class="o">:</span> <span class="s2">"myhost.com"</span><span class="p">,</span>
+    <span class="nx">port</span><span class="o">:</span> <span class="mi">21</span><span class="p">,</span> <span class="c1">// The port defaults to 21, but let's include it anyway.</span>
+<span class="p">});</span>
+
+
+<span class="c1">// First, we authenticate the user</span>
+<span class="nx">ftp</span><span class="p">.</span><span class="nx">auth</span><span class="p">(</span><span class="nx">user</span><span class="p">,</span> <span class="nx">pass</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="k">throw</span> <span class="nx">err</span><span class="p">;</span>
+
+    <span class="c1">// Retrieve a file in the remote server. When the file has been retrieved,</span>
+    <span class="c1">// the callback will be called with `data` being the Buffer with the</span>
+    <span class="c1">// contents of the file.</span>
+
+    <span class="c1">// This is a convenience method that hides the actual complexity of setting</span>
+    <span class="c1">// up passive mode and retrieving files.</span>
+
+    <span class="nx">ftp</span><span class="p">.</span><span class="nx">get</span><span class="p">(</span><span class="s2">"/folder/file.ext"</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="k">throw</span> <span class="nx">err</span><span class="p">;</span>
+
+        <span class="c1">// Do something with the buffer</span>
+        <span class="nx">doSomething</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+
+        <span class="c1">// We can use raw FTP commands directly as well. In this case we use FTP</span>
+        <span class="c1">// 'QUIT' method, which accepts no parameters and returns the farewell</span>
+        <span class="c1">// message from the server</span>
+        <span class="nx">ftp</span><span class="p">.</span><span class="nx">raw</span><span class="p">.</span><span class="nx">quit</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="k">throw</span> <span class="nx">err</span><span class="p">;</span>
+
+            <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"FTP session finalized! See you soon!"</span><span class="p">);</span>
+        <span class="p">});</span>
+    <span class="p">});</span>
+<span class="p">});</span>
+
+<span class="c1">// The following code assumes that you have authenticated the user, just like</span>
+<span class="c1">// I did in the code above.</span>
+
+<span class="c1">// Create a directory</span>
+<span class="nx">ftp</span><span class="p">.</span><span class="nx">raw</span><span class="p">.</span><span class="nx">mkd</span><span class="p">(</span><span class="s2">"/example_dir"</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+        <span class="k">throw</span> <span class="nx">err</span><span class="p">;</span>
+
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span>
+<span class="p">});</span>
+
+<span class="c1">// Delete a directory</span>
+<span class="nx">ftp</span><span class="p">.</span><span class="nx">raw</span><span class="p">.</span><span class="nx">rmd</span><span class="p">(</span><span class="s2">"/example_dir"</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+        <span class="k">throw</span> <span class="nx">err</span><span class="p">;</span>
+
+    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span>
+<span class="p">});</span>
+</pre>
+</div>
+
+
+<p>You can find more usage examples in the unit tests for it. This documentation
+will grow as jsftp evolves, I promise!</p>
+
+<h2>API</h2>
+
+<h3>Properties</h3>
+
+<h4>Ftp.host</h4>
+
+<p>Host name for the current FTP server.</p>
+
+<h4>Ftp.port</h4>
+
+<p>Port number for the current FTP server (defaults to 21).</p>
+
+<h4>Ftp.socket</h4>
+
+<p>NodeJS socket for the current FTP server.</p>
+
+<h4>Ftp.dataConn</h4>
+
+<p>NodeJS socket for the current passive connection, if any.</p>
+
+<h4>Ftp.features</h4>
+
+<p><code>features</code> is an array of feature names for the current FTP server. It is
+generated when the user authenticates with the <code>auth</code> method.</p>
+
+<h3>Methods</h3>
+
+<h4><code>Ftp.raw.FTP_COMMAND([params], callback)</code></h4>
+
+<p>All the standard FTP commands are available under the <code>raw</code> namespace. These
+commands might accept parameters or not, but they always accept a callback
+with the signature <code>err, data</code>, in which <code>err</code> is the error response coming
+from the server (usually a 4xx or 5xx error code) and the data is an object
+that contains two properties: <code>code</code> and <code>text</code>. <code>code</code> is an integer indicating
+the response code of the response and <code>text</code> is the response stgring itself.</p>
+
+<h4><code>Ftp.auth(username, password, callback)</code></h4>
+
+<p>Authenticates the user with the given username and password. If null or empty
+values are passed for those, <code>auth</code> will use anonymous credentials. <code>callback</code>
+will be called with the response text in case of successful login or with an
+error as a first parameter, in normal Node fashion.</p>
+
+<h4><code>Ftp.list(filePath, callback)</code></h4>
+
+<p>Lists <code>filePath</code> contents using a passive connection.</p>
+
+<h4><code>Ftp.get(filePath, callback)</code></h4>
+
+<p>Downloads <code>filePath</code> from the server.</p>
+
+<h4><code>Ftp.put(filePath, buffer, callback)</code></h4>
+
+<p>Uploads a file to <code>filePath</code>. It accepts a <code>buffer</code> parameter that will be
+written in the remote file.</p>
+
+<h4><code>Ftp.rename(from, to, callback)</code></h4>
+
+<p>Renames a file in the server. <code>from</code> and <code>to</code> are both filepaths.</p>
+
+<h4><code>Ftp.ls(filePath, callback)</code></h4>
+
+<p>Lists information about files or directories and yields an array of file objects with parsed file properties to the callback. You should use this function instead of <code>stat</code> or <code>list</code> in case you need to do something with the individual files properties.</p>
+
+<h4><code>Ftp.keepAlive()</code></h4>
+
+<p>Refreshes the interval thats keep the server connection active. There is no
+need to call this method since it is taken care internally</p>
+
+<h2>Installation</h2>
+
+<pre><code>npm install jsftp
+</code></pre>
+
+<h2>Tests</h2>
+
+<p>The test script fires up by default the FTP server that comes with OSX. You
+will have to put your OSX user credentials in <code>jsftp_test.js</code> if you want to
+run it. If you are not on OSX, feel free to change the FTP host, port and
+credentials to point to a remote server.</p>
+
+<p>To run the tests in the command line:</p>
+
+<pre><code>node jsftp_test.js
+</code></pre>
+
+<p>If tests are failing it might be that your user doesn't have enough rights to
+run the FTP service. In that case you should run the tests as <code>sudo</code>:</p>
+
+<pre><code>sudo node jsftp_test.js
+</code></pre>
+
+<p>Please note that running scripts as sudo is dangerous and you will grant the
+script to do anything in your server. You should do it at your own risk.</p>
+
+<h2>License</h2>
+
+<p>See LICENSE.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/sergi">sergi</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-30988454-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
