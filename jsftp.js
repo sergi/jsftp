@@ -1,12 +1,13 @@
 /*
  * @package jsFTP
- * @copyright Copyright(c) 2011 Ajax.org B.V. <info AT ajax DOT org>
- * @author Sergi Mansilla <sergi DOT mansilla AT gmail DOT com>
+ * @copyright Copyright(c) 2012 Ajax.org B.V. <info@c9.io>
+ * @author Sergi Mansilla <sergi.mansilla@gmail.com>
  * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
  */
 
 var Net = require("net");
-var ftpPasv = require("./lib/ftpPasv");
+var Util = require("util");
+var EventEmitter = require('events').EventEmitter;
 var Parser = require('./lib/ftpParser');
 var S = require("streamer");
 
@@ -14,8 +15,8 @@ var slice = Array.prototype.slice;
 
 var FTP_PORT = 21;
 var RE_PASV = /[-\d]+,[-\d]+,[-\d]+,[-\d]+,([-\d]+),([-\d]+)/;
-var RE_RES = /^(\d\d\d)\s(.*)/;
-var RE_MULTI = /^(\d\d\d)-/;
+var RE_RES = /^(\d{3})\s(.*)/;
+var RE_MULTI = /^(\d{3})-/;
 var RE_NL_END = /\r\n$/;
 var RE_NL = /\r\n/;
 
@@ -31,6 +32,34 @@ var COMMANDS = [
     // Extended features
     "SYST", "CHMOD", "SIZE"
 ];
+
+// From https://github.com/coolaj86/node-bufferjs
+function concat(bufs) {
+    var buffer, length = 0, index = 0;
+
+    if (!Array.isArray(bufs))
+        bufs = Array.prototype.slice.call(arguments);
+
+    for (var i=0, l=bufs.length; i<l; i++) {
+        buffer = bufs[i];
+
+        if (!Buffer.isBuffer(buffer))
+            buffer = bufs[i] = new Buffer(buffer);
+
+        length += buffer.length;
+    }
+
+    buffer = new Buffer(length);
+
+    bufs.forEach(function (buf, i) {
+        buf = bufs[i];
+        buf.copy(buffer, index, 0, buf.length);
+        index += buf.length;
+        delete bufs[i];
+    });
+
+    return buffer;
+}
 
 // Queue function that maintains an ordered queue of streams.
 var queue = function queue() {
@@ -89,17 +118,13 @@ var Ftp = module.exports = function(cfg) {
         var lcCmd = cmd.toLowerCase();
         self.raw[lcCmd] = function() {
             var callback;
-            var action = lcCmd;
+            var action = lcCmd + " ";
+            var args = slice.call(arguments);
 
-            if (arguments.length) {
-                var args = slice.call(arguments);
+            if (typeof args[args.length - 1] === "function")
+                callback = args.pop();
 
-                if (typeof args[args.length - 1] == "function")
-                    callback = args.pop();
-
-                if (args.length)
-                    action += " " + args.join(" ");
-            }
+            action += args.join(" ");
 
             if (lcCmd === "quit" && self._keepAliveInterval)
                 clearInterval(self._keepAliveInterval);
@@ -117,43 +142,38 @@ var Ftp = module.exports = function(cfg) {
             var isAuthCmd = /feat|user|pass/.test(action);
             if (!self.authenticated && !isAuthCmd) {
                 self.auth(self.options.user, self.options.pass, function() {
-                    enqueue(self.cmdQueue, [action, callback]);
+                    enqueue(self.cmdQueue, [action.trim(), callback]);
                 });
             }
             else {
-                enqueue(self.cmdQueue, [action, callback]);
+                enqueue(self.cmdQueue, [action.trim(), callback]);
             }
         };
     });
 
-    this.cmdListeners = [];
-
-    if (DEBUG_MODE)
-        this.addCmdListener(this._log);
+    if (DEBUG_MODE) {
+        this.on("command", this._log);
+        this.on("response", this._log);
+    }
 
     this.host = cfg.host;
     this.port = cfg.port || FTP_PORT;
 
     var socket = this._createSocket(this.port, this.host);
-    var cmd;
 
     // Writes a new command to the server, but before that it pushes the
     // command into `cmds` list. This command will get paired with its response
     // once that one is received
     this.push = function(command, callback, onWriteCallback) {
-        if (!command || typeof command != "string")
+        if (!command || typeof command !== "string")
             return;
 
         var self = this;
         function send() {
             socket.write(command + "\r\n");
-
-            self.cmdListeners.forEach(function(listener) {
-                listener({
-                    type: "command",
-                    code: "",
-                    text: self._sanitize(command)
-                });
+            self.emit("command", { 
+                code: "", 
+                text: self._sanitize(command) 
             });
 
             if (onWriteCallback)
@@ -169,15 +189,12 @@ var Ftp = module.exports = function(cfg) {
 
             if (!this.connecting) {
                 this.connecting = true;
-
-                var reConnect = function() {
-                    self.connecting = false;
-                    send();
-                };
-
                 try {
-                    socket = this._createSocket(this.port, this.host, reConnect);
-                    createStreams();
+                    socket = this._createSocket(this.port, this.host, function() {
+                        self.connecting = false;
+                        send();
+                    });
+                    this.createStreams();
                 }
                 catch (e) {
                     console.log(e);
@@ -195,8 +212,8 @@ var Ftp = module.exports = function(cfg) {
         socket.on("close", stop);
     };
 
-    var cmds, tasks;
-    var createStreams = this.createStreams = function() {
+    var cmd, cmds, tasks;
+    this.createStreams = function() {
         self.cmdQueue = queue();
         (self.nextCmd = function nextCmd() {
             S.head(self.cmdQueue)(function(obj) {
@@ -206,9 +223,7 @@ var Ftp = module.exports = function(cfg) {
         })();
 
         // Stream of FTP commands from the client.
-        cmds = function(next, stop) {
-            cmd = next;
-        };
+        cmds = function(next, stop) { cmd = next; };
 
         /**
          * Zips (as in array zipping) commands with responses. This creates
@@ -219,15 +234,7 @@ var Ftp = module.exports = function(cfg) {
             // We ignore FTP marks for now. They don't convey useful
             // information. A more elegant solution should be found in the
             // future.
-            var mark = isMark(x.code);
-            /*
-            if (mark) {
-                self.cmdListeners.forEach(function(listener) {
-                    listener(null, x);
-                });
-            }
-            */
-            return !mark;
+            return !isMark(x.code);
         }, self.serverResponse(input)), S.append(S.list(null), cmds));
 
         tasks(self.parse.bind(self), function(err) {
@@ -237,16 +244,14 @@ var Ftp = module.exports = function(cfg) {
         });
     };
 
-    createStreams();
+    this.createStreams();
     this.cmd = cmd;
 };
 
+Util.inherits(Ftp, EventEmitter);
+
 (function() {
     "use strict";
-    this.addCmdListener = function(listener) {
-        if (this.cmdListeners.indexOf(listener) === -1)
-            this.cmdListeners.push(listener);
-    };
 
     this._createSocket = function(port, host, firstTask) {
         this.connecting = true;
@@ -262,7 +267,7 @@ var Ftp = module.exports = function(cfg) {
 
         var self = this;
         socket.on("connect", function() {
-            if (DEBUG_MODE) console.log("FTP socket connected");
+            this.emit("connected");
             firstTask && firstTask();
             self.connecting = false;
         });
@@ -277,7 +282,6 @@ var Ftp = module.exports = function(cfg) {
      * the server belong to a single command.
      */
     this.serverResponse = function(source) {
-        var self = this;
         var NL = "\n";
         var buffer = [];
         var currentCode = 0;
@@ -285,17 +289,17 @@ var Ftp = module.exports = function(cfg) {
         return function stream(next, stop) {
             source(function(data) {
                 var lines = data.replace(RE_NL_END, "").replace(RE_NL, NL).split(NL);
-
                 lines.forEach(function(line) {
                     var simpleRes = RE_RES.exec(line);
-                    var multiRes;
+                    var multiRes = RE_MULTI.exec(line);
 
                     if (simpleRes) {
                         var code = parseInt(simpleRes[1], 10);
-
                         if (buffer.length) {
                             buffer.push(line);
 
+                            // Multiline responses from FTP signal last line by
+                            // starting the last line with the code that they started with.
                             if (currentCode === code) {
                                 line = buffer.join(NL);
                                 buffer = [];
@@ -303,22 +307,19 @@ var Ftp = module.exports = function(cfg) {
                             }
                         }
 
-                        self.cmdListeners.forEach(function(listener) {
-                            listener({
-                                type: "response",
-                                code: code,
-                                text: line
-                            });
-                        });
-                        next({ code: code, text: line });
+                        var data = {
+                            code: code,
+                            text: line
+                        };
+                        this.emit("response", data);
+                        next(data);
                     }
                     else {
-                        if (!buffer.length && (multiRes = RE_MULTI.exec(line)))
+                        if (!buffer.length && multiRes)
                             currentCode = parseInt(multiRes[1], 10);
 
                         buffer.push(line);
                     }
-
                 }, this);
             }, stop);
         };
@@ -345,14 +346,15 @@ var Ftp = module.exports = function(cfg) {
 
         if (callback) {
             // In FTP every response code above 399 means error in some way.
-            // Since the RFC is not respected by many servers, we are goiong to
+            // Since the RFC is not respected by many servers, we are going to
             // overgeneralize and consider every value above 399 as an error.
             if (ftpResponse && ftpResponse.code > 399) {
-            	err = new Error(ftpResponse.text || "Unknown FTP error.")
-            	err.code = ftpResponse.code;
-            	callback(err);
-            } else {
-            	callback(null, ftpResponse);
+                err = new Error(ftpResponse.text || "Unknown FTP error.")
+                err.code = ftpResponse.code;
+                callback(err);
+            } 
+            else {
+                callback(null, ftpResponse);
             }
         }
         this.nextCmd();
@@ -456,7 +458,7 @@ var Ftp = module.exports = function(cfg) {
         if (!pass) pass = "@anonymous";
 
         this.authenticating = true;
-        //this._initialize(function() {
+        this._initialize(function() {
             self.raw.user(user, function(err, res) {
                 if (!err && [230, 331, 332].indexOf(res.code) > -1) {
                     self.raw.pass(pass, function(err, res) {
@@ -485,7 +487,7 @@ var Ftp = module.exports = function(cfg) {
                     notifyAll(new Error("Login not accepted"));
                 }
             });
-        //});
+        });
     };
 
     /**
@@ -495,7 +497,7 @@ var Ftp = module.exports = function(cfg) {
      *
      * @param data {Object} Object with the following properties:
      *
-     *  mode {String}, optional: "I" or "A", referring to binary or text format, respectively. Default is binary.,
+     *  mode {String}, optional: "I" or "A", referring to binary or text format, respectively. Default is binary.
      *  cmd {String}: String of the command to execute,
      *  onCmdWrite {function}, optional: Function to execute just after writing the command to the socket.
      *  pasvCallback {function}, optional: Function to execute when the data socket closes (either by success or by error).
@@ -513,13 +515,26 @@ var Ftp = module.exports = function(cfg) {
                 return callback("PASV: Bad port");
 
             var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-            self.dataConn = new ftpPasv({
-                host: self.host,
-                port: port,
-                mode: data.mode,
-                callback: callback,
-                ftp: self
-            });
+            var contents;
+            var onData = function(result) {
+                if (data.mode === "I")
+                    contents = concat([contents || [], result]);
+                else
+                    contents = [contents, result].join("\n");
+            };
+            
+            var onEnd = function(error) {
+                callback(error, contents);
+            };
+            
+            var psvSocket = Net.createConnection(port, self.host);
+            psvSocket.setEncoding("utf8");
+            psvSocket.on("data", onData);
+            psvSocket.on("end", onEnd);
+            psvSocket.on("error", onEnd);
+            self.dataConn = {
+                socket: psvSocket
+            };
         };
 
         // Make sure to set the desired mode before starting any passive
@@ -552,8 +567,7 @@ var Ftp = module.exports = function(cfg) {
      * command to retrieve the file.
      */
     this.get = function(filePath, callback) {
-        var self = this;
-        self.setPassive({
+        this.setPassive({
             mode: "I",
             cmd: "retr " + filePath,
             pasvCallback: callback
@@ -631,7 +645,7 @@ var Ftp = module.exports = function(cfg) {
                 // and we set the variable `useList` to true, to avoid extra round
                 // trips to the server to check.
                 if ((err && (data.code === 502 || data.code === 500)) ||
-                    // Not sure if the "hummingbird" system check ^^^ his still
+                    // Not sure if the "hummingbird" system check ^^^ is still
                     // necessary. If they support any standards, the 500 error
                     // should have us covered. Let's leave it for now.
                     (self.system && self.system.indexOf("hummingbird") > -1)) {
