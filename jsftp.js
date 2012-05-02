@@ -1,5 +1,5 @@
 /*
- * @package jsFTP
+ * @package jsftp
  * @copyright Copyright(c) 2012 Ajax.org B.V. <info@c9.io>
  * @author Sergi Mansilla <sergi.mansilla@gmail.com>
  * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
@@ -35,7 +35,9 @@ var COMMANDS = [
 
 // From https://github.com/coolaj86/node-bufferjs
 function concat(bufs) {
-    var buffer, length = 0, index = 0;
+    var buffer;
+    var length = 0;
+    var index = 0;
 
     if (!Array.isArray(bufs))
         bufs = Array.prototype.slice.call(arguments);
@@ -50,7 +52,6 @@ function concat(bufs) {
     }
 
     buffer = new Buffer(length);
-
     bufs.forEach(function (buf, i) {
         buf = bufs[i];
         buf.copy(buffer, index, 0, buf.length);
@@ -384,9 +385,6 @@ Util.inherits(Ftp, EventEmitter);
      * @returns {String} Sanitized command
      */
     this._sanitize = function(cmd) {
-        if (!cmd)
-            return;
-
         var _cmd = cmd.slice(0, 5);
         if (_cmd === "pass ")
             cmd = _cmd + Array(cmd.length - 5).join("*");
@@ -410,7 +408,7 @@ Util.inherits(Ftp, EventEmitter);
         if (features.length) {
             // Ignore header and footer
             features = features.slice(1, -1).map(function(feature) {
-                return /^\s*(\w*)\s*/.exec(feature)[1].trim().toLowerCase();
+                return (/^\s*(\w*)\s*/).exec(feature)[1].trim().toLowerCase();
             });
         }
         return features;
@@ -657,8 +655,6 @@ Util.inherits(Ftp, EventEmitter);
                 }
             });
         }
-
-
     };
 
     this.rename = function(from, to, callback) {
