@@ -8,7 +8,7 @@
 var Net = require("net");
 var Util = require("util");
 var EventEmitter = require("events").EventEmitter;
-var Parser = require('./lib/ftpParser');
+var Parser = require("./lib/ftpParser");
 var Gab = require("gab");
 
 var slice = Array.prototype.slice;
@@ -281,9 +281,6 @@ Ftp.prototype.constructor = Ftp;
 
         this.socket.destroy();
 
-        if (this.dataConn)
-            this.dataConn.socket.destroy();
-
         this.features = null;
         this.tasks = null;
         this.authenticated = false;
@@ -377,7 +374,10 @@ Ftp.prototype.constructor = Ftp;
             var contents;
 
             var onConnect = function() {
-                self.push([data.cmd], data.onCmdWrite);
+                self.push([data.cmd], function() {
+                    if (data.onCmdWrite)
+                        data.onCmdWrite(psvSocket);
+                });
             };
 
             var onData = function(result) {
@@ -397,9 +397,6 @@ Ftp.prototype.constructor = Ftp;
             psvSocket.on("data", onData);
             psvSocket.on("end", onEnd);
             psvSocket.on("error", onEnd);
-            self.dataConn = {
-                socket: psvSocket
-            };
         };
 
         // Make sure to set the desired mode before starting any passive
@@ -443,9 +440,8 @@ Ftp.prototype.constructor = Ftp;
         this.setPassive({
             mode: "I",
             cmd: "stor " + filePath,
-            onCmdWrite: function() {
-                var socket = self.dataConn.socket;
-                if (socket.writable)
+            onCmdWrite: function(socket) {
+                if (socket && socket.writable)
                     socket.end(buffer);
             },
             pasvCallback: function(error, contents) {

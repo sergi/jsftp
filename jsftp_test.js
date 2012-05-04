@@ -169,7 +169,7 @@ module.exports = {
         var ftp = this.ftp;
             ftp.raw.mkd(newDir, function(err, res) {
                 assert.ok(!err);
-                assert.ok(res.code === 257);
+            assert.equal(res.code, 257);
 
                 ftp.raw.rmd(newDir, function(err, res) {
                     assert.ok(!err);
@@ -185,7 +185,7 @@ module.exports = {
         var ftp = this.ftp;
             ftp.raw.mkd(newDir, function(err, res) {
                 assert.ok(!err);
-                assert.ok(res.code === 257);
+            assert.equal(res.code, 257);
 
                 ftp.raw.rmd(newDir, function(err, res) {
                     assert.ok(!err);
@@ -283,7 +283,7 @@ module.exports = {
             ftp.get(filePath, function(err, data) {
                     assert.ok(!err, err);
                     assert.ok(data);
-                    assert.ok(counter == 2);
+            assert.equal(counter, 2);
             next();
             });
 
