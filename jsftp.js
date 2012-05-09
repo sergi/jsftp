@@ -43,19 +43,13 @@ var concat = function(bufs) {
 
     for (var i=0, l=bufs.length; i<l; i++) {
         buffer = bufs[i];
-
-        if (!Buffer.isBuffer(buffer))
-            buffer = bufs[i] = new Buffer(buffer);
-
         length += buffer.length;
     }
 
     buffer = new Buffer(length);
     bufs.forEach(function (buf, i) {
-        buf = bufs[i];
         buf.copy(buffer, index, 0, buf.length);
         index += buf.length;
-        delete bufs[i];
     });
 
     return buffer;
@@ -371,7 +365,6 @@ Ftp.prototype.constructor = Ftp;
                 return callback("PASV: Bad port");
 
             var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-            var contents;
 
             var onConnect = function() {
                 self.push([data.cmd], function() {
@@ -380,20 +373,26 @@ Ftp.prototype.constructor = Ftp;
                 });
             };
 
+            var pieces = [];
             var onData = function(result) {
-                if (data.mode === "I")
-                    contents = concat([contents || [], result]);
-                else
-                    contents = [contents, result].join("\n");
+                pieces.push(result);
             };
 
             var onEnd = function(error) {
-                callback(error, contents);
+                if (error)
+                    callback(error);
+                else if (data.mode === "I")
+                    callback(null, concat(pieces));
+                else
+                    callback(null, pieces.join("\n"));
             };
 
             var psvSocket = Net.createConnection(port, self.host);
-            psvSocket.setEncoding("utf8");
-            psvSocket.on("connect", onConnect);
+            if (data.mode !== "I") {
+                psvSocket.setEncoding("utf8");
+            }
+
+            psvSocket.once("connect", onConnect);
             psvSocket.on("data", onData);
             psvSocket.on("end", onEnd);
             psvSocket.on("error", onEnd);
@@ -401,7 +400,7 @@ Ftp.prototype.constructor = Ftp;
 
         // Make sure to set the desired mode before starting any passive
         // operation.
-        this.raw.type(data.mode || "I", function(err, res) {
+        this.raw.type(data.mode, function(err, res) {
             self.push(["pasv", doPasv]);
         });
     };
