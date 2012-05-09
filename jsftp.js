@@ -228,6 +228,10 @@ Ftp.prototype.constructor = Ftp;
         });
     };
 
+    this.addCmdListener = function(listener) {
+        this.emitter.on("command", listener);
+    };
+
     this._log = function(msg) {
         console.log("\n" + msg);
     };
