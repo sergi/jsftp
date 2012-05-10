@@ -2,21 +2,23 @@
  * @package jsftp
  * @copyright Copyright(c) 2012 Ajax.org B.V. <info@c9.io>
  * @author Sergi Mansilla <sergi.mansilla@gmail.com>
- * @license https://github.com/sergi/jsftp/blob/master/LICENSE MIT License
+ * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
  */
 
 var Net = require("net");
+var ftpPasv = require("./lib/ftpPasv");
+var Parser = require('./lib/ftpParser');
+var S = require("streamer");
 var Util = require("util");
 var EventEmitter = require("events").EventEmitter;
-var Parser = require("./lib/ftpParser");
-var Gab = require("gab");
 
 var slice = Array.prototype.slice;
 
 var FTP_PORT = 21;
 var RE_PASV = /[-\d]+,[-\d]+,[-\d]+,[-\d]+,([-\d]+),([-\d]+)/;
-var RE_RES = /^(\d{3})\s(.*)/;
-var RE_MULTI = /^(\d{3})-/;
+var RE_RES = /^(\d\d\d)\s(.*)/;
+var RE_MULTI = /^(\d\d\d)-/;
+var RE_NL_END = /\r\n$/;
 var RE_NL = /\r\n/;
 
 var DEBUG_MODE = false;
@@ -32,28 +34,33 @@ var COMMANDS = [
     "SYST", "CHMOD", "SIZE"
 ];
 
-// From https://github.com/coolaj86/node-bufferjs
-var concat = function(bufs) {
-    var buffer;
-    var length = 0;
-    var index = 0;
+// Queue function that maintains an ordered queue of streams.
+var queue = function queue() {
+    var next;
+    var buffer = slice.call(arguments);
 
-    if (!Array.isArray(bufs))
-        bufs = Array.prototype.slice.call(arguments);
+    var stream = function stream($, stop) {
+        next = $;
+        stream._update();
+    };
 
-    for (var i=0, l=bufs.length; i<l; i++) {
-        buffer = bufs[i];
-        length += buffer.length;
-    }
+    stream._update = function _update() {
+        buffer.push.apply(buffer, arguments);
+        if (next && buffer.length) {
+            if (false !== next(buffer.shift()))
+                _update();
+            else
+                next = null;
+        }
+    };
+    return stream;
+};
 
-    buffer = new Buffer(length);
-    bufs.forEach(function (buf, i) {
-        buf.copy(buffer, index, 0, buf.length);
-        index += buf.length;
-    });
-
-    return buffer;
-}
+// Enqueues an `element` in the `stream` object, which has to be a reference to
+// a queue.
+var enqueue = function enqueue(stream, element) {
+    stream._update.apply(null, slice.call(arguments, 1));
+};
 
 // Codes from 100 to 200 are FTP marks
 var isMark = function isMark(code) {
@@ -61,56 +68,47 @@ var isMark = function isMark(code) {
 };
 
 var Ftp = module.exports = function(cfg) {
-    Gab.apply(this, arguments);
+    "use strict";
+
     var Emitter = function() { EventEmitter.call(this); };
     Util.inherits(Emitter, EventEmitter);
     this.emitter = new Emitter();
 
     this.raw = {};
-    this.data = "";
-    this.buffer = [];
     this.options = cfg;
-    this.cmdQueue = [["NOOP", function() {}]];
     // This variable will be true if the server doesn't support the `stat`
     // command. Since listing a directory or retrieving file properties is
     // quite a common operation, it is more efficient to avoid the round-trip
     // to the server.
     this.useList = false;
-    this.currentCode = 0;
 
-    this.host = cfg.host;
-    this.port = cfg.port || FTP_PORT;
+    if (cfg) {
+        this.onError = cfg.onError;
+        this.onTimeout = cfg.onTimeout;
+        this.onConnect = cfg.onConnect;
+    }
 
     // Generate generic methods from parameter names. They can easily be
     // overriden if we need special behavior. They accept any parameters given,
     // it is the responsability of the user to validate the parameters.
-    COMMANDS.forEach(this.generateCommand, this);
-
-    if (DEBUG_MODE) {
-        this.emitter.on("command", this._log);
-        this.emitter.on("response", this._log);
-    }
-
-    this.connect(this.port, this.host);
-};
-
-Ftp.prototype = new Gab;
-Ftp.prototype.constructor = Ftp;
-
-(function() {
-    "use strict";
-
-    this.generateCommand = function(cmd) {
-        var self = this;
-        cmd = cmd.toLowerCase();
-        this.raw[cmd] = function() {
+    var self = this;
+    COMMANDS.forEach(function(cmd) {
+        var lcCmd = cmd.toLowerCase();
+        self.raw[lcCmd] = function() {
             var callback;
-            var args = slice.call(arguments);
-            if (typeof args[args.length - 1] === "function") {
-                callback = args.pop();
+            var action = lcCmd;
+
+            if (arguments.length) {
+                var args = slice.call(arguments);
+
+                if (typeof args[args.length - 1] == "function")
+                    callback = args.pop();
+
+                if (args.length)
+                    action += " " + args.join(" ");
             }
 
-            if (cmd === "quit" && self._keepAliveInterval)
+            if (lcCmd === "quit" && self._keepAliveInterval)
                 clearInterval(self._keepAliveInterval);
             else
                 self.keepAlive();
@@ -123,98 +121,225 @@ Ftp.prototype.constructor = Ftp;
             // order to not mess up the queue order. Ideally, that would be
             // built into the queue object. All this explanation to justify a
             // slight slopiness in the code flow.
-            var action = cmd + " " + args.join(" ");
             var isAuthCmd = /feat|user|pass/.test(action);
             if (!self.authenticated && !isAuthCmd) {
                 self.auth(self.options.user, self.options.pass, function() {
-                    self.push([action.trim(), callback]);
+                    enqueue(self.cmdQueue, [action, callback]);
                 });
             }
             else {
-                self.push([action.trim(), callback]);
+                enqueue(self.cmdQueue, [action, callback]);
             }
         };
-    },
+    });
 
-    this.collectIncomingData = function(data) {
-        // if (isMark(data.code))
-            // return;
+    if (DEBUG_MODE) {
+        this.emitter.on("command", this._log);
+        this.emitter.on("response", this._log);
+    }
 
-        this.data += data;
-    },
+    this.host = cfg.host;
+    this.port = cfg.port || FTP_PORT;
+
+    var socket = this._createSocket(this.port, this.host);
+    var cmd;
 
     // Writes a new command to the server, but before that it pushes the
     // command into `cmds` list. This command will get paired with its response
     // once that one is received
-    this.push = function(data, onWriteCallback) {
-        var command = data[0];
-        Gab.prototype.push.call(this, command + "\r\n");
+    this.push = function(command, callback, onWriteCallback) {
+        if (!command || typeof command != "string")
+            return;
 
-        this.emitter.emit("command", this._sanitize(command));
-        this.cmdQueue.push(data);
+        var self = this;
+        function send() {
+            socket.write(command + "\r\n");
+            self.emitter.emit("command", self._sanitize(command));
 
-        if (onWriteCallback) {
-            onWriteCallback();
+            if (onWriteCallback)
+                onWriteCallback();
+        }
+
+        if (socket.writable) {
+            send();
+        }
+        else {
+            if (DEBUG_MODE)
+                console.log("FTP socket is not writable, reopening socket...");
+
+            if (!this.connecting) {
+                this.connecting = true;
+
+                var reConnect = function() {
+                    self.connecting = false;
+                    send();
+                };
+
+                try {
+                    socket = this._createSocket(this.port, this.host, reConnect);
+                    createStreams();
+                }
+                catch (e) {
+                    console.log(e);
+                }
+            }
         }
     };
 
-    this.foundTerminator = function() {
+    // Stream of incoming data from the FTP server.
+    var input = function(next, stop) {
+        socket.on("connect", self.onConnect || function(){});
+        socket.on("data", next);
+        socket.on("end", stop);
+        socket.on("error", stop);
+        socket.on("close", stop);
+    };
+
+    var cmds, tasks;
+    var createStreams = this.createStreams = function() {
+        self.cmdQueue = queue();
+        (self.nextCmd = function nextCmd() {
+            S.head(self.cmdQueue)(function(obj) {
+                cmd(obj, self.nextCmd);
+                self.push(obj[0], obj[1], obj[2] || null);
+            });
+        })();
+
+        // Stream of FTP commands from the client.
+        cmds = function(next, stop) {
+            cmd = next;
+        };
+
+        /**
+         * Zips (as in array zipping) commands with responses. This creates
+         * a stream that keeps yielding command/response pairs as soon as each pair
+         * becomes available.
+         */
+        tasks = S.zip(S.filter(function(x) {
+            // We ignore FTP marks for now. They don't convey useful
+            // information. A more elegant solution should be found in the
+            // future.
+            return !isMark(x.code);
+        }, self.serverResponse(input)), S.append(S.list(null), cmds));
+
+        tasks(self.parse.bind(self), function(err) {
+            if (DEBUG_MODE) {
+                console.log("Ftp socket closed its doors to the public.");
+            }
+        });
+    };
+
+    createStreams();
+    this.cmd = cmd;
+};
+
+(function() {
+    this.addCmdListener = function(listener, action) {
+        this.emitter.on(action || "command", listener);
+    };
+
+    this._createSocket = function(port, host, firstTask) {
+        this.connecting = true;
+        var socket = this.socket = Net.createConnection(port, host);
+
+        socket.setTimeout(TIMEOUT, function() {
+            if (this.onTimeout)
+                this.onTimeout(new Error("FTP socket timeout"));
+
+            this.destroy();
+        }.bind(this));
+
+        var self = this;
+        socket.on("connect", function() {
+            if (DEBUG_MODE) console.log("FTP socket connected");
+            firstTask && firstTask();
+            self.connecting = false;
+        });
+
+        return this.socket;
+    };
+
+    /**
+     * `serverResponse` receives a stream of responses from the server and filters
+     * them before pushing them back into the stream. The filtering is
+     * necessary to detect multiline responses, in which several responses from
+     * the server belong to a single command.
+     */
+    this.serverResponse = function(source) {
+        var self = this;
         var NL = "\n";
-        var line = this.data.replace("\r", "");
-        this.data = "";
+        var buffer = [];
+        var currentCode = 0;
 
-        var simpleRes = RE_RES.exec(line);
-        var multiRes = RE_MULTI.exec(line);
-        if (simpleRes) {
-            var code = parseInt(simpleRes[1], 10);
-            if (this.buffer.length) {
-                this.buffer.push(line);
+        return function stream(next, stop) {
+            source(function(data) {
+                var lines = data.toString().replace(RE_NL_END, "").replace(RE_NL, NL).split(NL);
 
-                // Multiline responses from FTP signal last line by
-                // starting the last line with the code that they started with.
-                if (this.currentCode === code) {
-                    line = this.buffer.join(NL);
-                    this.buffer = [];
-                    this.currentCode = 0;
-                }
-                else {
-                    return;
-                }
-            }
+                lines.forEach(function(line) {
+                    var simpleRes = RE_RES.exec(line);
+                    var multiRes;
 
-            var ftpResponse = {
-                code: code,
-                text: line
-            };
+                    if (simpleRes) {
+                        var code = parseInt(simpleRes[1], 10);
 
-            if (this.cmdQueue.length) {
-                var cmd = this.cmdQueue.shift();
-                var cbk = cmd[1];
+                        if (buffer.length) {
+                            buffer.push(line);
 
-                if (!cbk)
-                    return;
+                            if (currentCode === code) {
+                                line = buffer.join(NL);
+                                buffer = [];
+                                currentCode = 0;
+                            }
+                        }
 
-                this.emitter.emit("response", ftpResponse.text);
-                // In FTP every response code above 399 means error in some way.
-                // Since the RFC is not respected by many servers, we are going to
-                // overgeneralize and consider every value above 399 as an error.
-                if (ftpResponse && ftpResponse.code > 399) {
-                    var err = new Error(ftpResponse.text || "Unknown FTP error.");
-                    err.code = ftpResponse.code;
-                    cbk(err);
-                }
-                else {
-                    cbk(null, ftpResponse);
-                }
+                        self.emitter.emit("response", line);
+                        next({ code: code, text: line });
+                    }
+                    else {
+                        if (!buffer.length && (multiRes = RE_MULTI.exec(line)))
+                            currentCode = parseInt(multiRes[1], 10);
+
+                        buffer.push(line);
+                    }
+
+                }, this);
+            }, stop);
+        };
+    };
+
+    /**
+     * Parse is called each time that a comand and a request are paired
+     * together. That is, each time that there is a round trip of actions
+     * between the client and the server. The `exp` param contains an array
+     * with the response from the server as a first element (text) and an array
+     * with the command executed and the callback (if any) as the second
+     * element.
+     *
+     * @param action {Array} Contains server response and client command info.
+     */
+    this.parse = function(action) {
+        if (!action || !action[1])
+            return;
+
+        var ftpResponse = action[0];
+        var command  = action[1];
+        var callback = command[1];
+        var err;
+
+        if (callback) {
+            // In FTP every response code above 399 means error in some way.
+            // Since the RFC is not respected by many servers, we are goiong to
+            // overgeneralize and consider every value above 399 as an error.
+            if (ftpResponse && ftpResponse.code > 399) {
+                err = new Error(ftpResponse.text || "Unknown FTP error.")
+                err.code = ftpResponse.code;
+                callback(err);
+            } else {
+                callback(null, ftpResponse);
             }
         }
-        else {
-            if (!this.buffer.length && multiRes)
-                this.currentCode = parseInt(multiRes[1], 10);
-
-            this.buffer.push(line);
-        }
-    },
+        this.nextCmd();
+    };
 
     this._initialize = function(callback) {
         var self = this;
@@ -228,12 +353,8 @@ Ftp.prototype.constructor = Ftp;
         });
     };
 
-    this.addCmdListener = function(listener) {
-        this.emitter.on("command", listener);
-    };
-
     this._log = function(msg) {
-        console.log("\n" + msg);
+        console.log("\n" + msg.text);
     };
 
     /**
@@ -244,6 +365,9 @@ Ftp.prototype.constructor = Ftp;
      * @returns {String} Sanitized command
      */
     this._sanitize = function(cmd) {
+        if (!cmd)
+            return;
+
         var _cmd = cmd.slice(0, 5);
         if (_cmd === "pass ")
             cmd = _cmd + Array(cmd.length - 5).join("*");
@@ -267,7 +391,7 @@ Ftp.prototype.constructor = Ftp;
         if (features.length) {
             // Ignore header and footer
             features = features.slice(1, -1).map(function(feature) {
-                return (/^\s*(\w*)\s*/).exec(feature)[1].trim().toLowerCase();
+                return /^\s*(\w*)\s*/.exec(feature)[1].trim().toLowerCase();
             });
         }
         return features;
@@ -279,8 +403,11 @@ Ftp.prototype.constructor = Ftp;
 
         this.socket.destroy();
 
+        if (this.dataConn)
+            this.dataConn.socket.destroy();
+
         this.features = null;
-        this.tasks = null;
+        this.tasks    = null;
         this.authenticated = false;
     };
 
@@ -351,7 +478,7 @@ Ftp.prototype.constructor = Ftp;
      *
      * @param data {Object} Object with the following properties:
      *
-     *  mode {String}, optional: "I" or "A", referring to binary or text format, respectively. Default is binary.
+     *  mode {String}, optional: "I" or "A", referring to binary or text format, respectively. Default is binary.,
      *  cmd {String}: String of the command to execute,
      *  onCmdWrite {function}, optional: Function to execute just after writing the command to the socket.
      *  pasvCallback {function}, optional: Function to execute when the data socket closes (either by success or by error).
@@ -369,43 +496,20 @@ Ftp.prototype.constructor = Ftp;
                 return callback("PASV: Bad port");
 
             var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-
-            var onConnect = function() {
-                self.push([data.cmd], function() {
-                    if (data.onCmdWrite)
-                        data.onCmdWrite(psvSocket);
-                });
-            };
-
-            var pieces = [];
-            var onData = function(result) {
-                pieces.push(result);
-            };
-
-            var onEnd = function(error) {
-                if (error)
-                    callback(error);
-                else if (data.mode === "I")
-                    callback(null, concat(pieces));
-                else
-                    callback(null, pieces.join("\n"));
-            };
-
-            var psvSocket = Net.createConnection(port, self.host);
-            if (data.mode !== "I") {
-                psvSocket.setEncoding("utf8");
-            }
-
-            psvSocket.once("connect", onConnect);
-            psvSocket.on("data", onData);
-            psvSocket.on("end", onEnd);
-            psvSocket.on("error", onEnd);
+            self.dataConn = new ftpPasv({
+                host: self.host,
+                port: port,
+                mode: data.mode,
+                callback: callback,
+                ftp: self
+            });
         };
 
         // Make sure to set the desired mode before starting any passive
         // operation.
-        this.raw.type(data.mode, function(err, res) {
-            self.push(["pasv", doPasv]);
+        this.raw.type(data.mode || "I", function(err, res) {
+            enqueue(self.cmdQueue, ["pasv", doPasv]);
+            enqueue(self.cmdQueue, [data.cmd, null, data.onCmdWrite]);
         });
     };
 
@@ -431,7 +535,8 @@ Ftp.prototype.constructor = Ftp;
      * command to retrieve the file.
      */
     this.get = function(filePath, callback) {
-        this.setPassive({
+        var self = this;
+        self.setPassive({
             mode: "I",
             cmd: "retr " + filePath,
             pasvCallback: callback
@@ -443,18 +548,12 @@ Ftp.prototype.constructor = Ftp;
         this.setPassive({
             mode: "I",
             cmd: "stor " + filePath,
-            onCmdWrite: function(socket) {
-                if (socket && socket.writable)
+            onCmdWrite: function() {
+                var socket = self.dataConn.socket;
+                if (socket.writable)
                     socket.end(buffer);
             },
-            pasvCallback: function(error, contents) {
-                // noop function in place because 'STOR' returns an extra command
-                // giving the state of the transfer.
-                if (!error)
-                    self.cmdQueue.push(["NOOP", function() {}])
-
-                callback(error, contents);
-          }
+            pasvCallback: callback
         });
     };
 
