@@ -274,7 +274,7 @@ module.exports = {
         var ftp = this.ftp;
         var fileName = "jsftp_test.js";
         var localPath = CWD + "/" + fileName;
-        var remotePath = remoteCWD + "/" + fileName;
+        var remotePath = remoteCWD + "/" + fileName + ".test";
 
         ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
             Fs.readFile(localPath, "binary", function(err, data) {

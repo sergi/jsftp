@@ -9,6 +9,8 @@ var Net = require("net");
 var ftpPasv = require("./lib/ftpPasv");
 var Parser = require('./lib/ftpParser');
 var S = require("streamer");
+var Util = require("util");
+var EventEmitter = require("events").EventEmitter;
 
 var slice = Array.prototype.slice;
 
@@ -67,6 +69,11 @@ var isMark = function isMark(code) {
 
 var Ftp = module.exports = function(cfg) {
     "use strict";
+
+    var Emitter = function() { EventEmitter.call(this); };
+    Util.inherits(Emitter, EventEmitter);
+    this.emitter = new Emitter();
+
     this.raw = {};
     this.options = cfg;
     // This variable will be true if the server doesn't support the `stat`
@@ -126,10 +133,10 @@ var Ftp = module.exports = function(cfg) {
         };
     });
 
-    this.cmdListeners = [];
-
-    if (DEBUG_MODE)
-        this.addCmdListener(this._log);
+    if (DEBUG_MODE) {
+        this.emitter.on("command", this._log);
+        this.emitter.on("response", this._log);
+    }
 
     this.host = cfg.host;
     this.port = cfg.port || FTP_PORT;
@@ -147,14 +154,7 @@ var Ftp = module.exports = function(cfg) {
         var self = this;
         function send() {
             socket.write(command + "\r\n");
-
-            self.cmdListeners.forEach(function(listener) {
-                listener({
-                    type: "command",
-                    code: "",
-                    text: self._sanitize(command)
-                });
-            });
+            self.emitter.emit("command", self._sanitize(command));
 
             if (onWriteCallback)
                 onWriteCallback();
@@ -219,15 +219,7 @@ var Ftp = module.exports = function(cfg) {
             // We ignore FTP marks for now. They don't convey useful
             // information. A more elegant solution should be found in the
             // future.
-            var mark = isMark(x.code);
-            /*
-            if (mark) {
-                self.cmdListeners.forEach(function(listener) {
-                    listener(null, x);
-                });
-            }
-            */
-            return !mark;
+            return !isMark(x.code);
         }, self.serverResponse(input)), S.append(S.list(null), cmds));
 
         tasks(self.parse.bind(self), function(err) {
@@ -242,16 +234,13 @@ var Ftp = module.exports = function(cfg) {
 };
 
 (function() {
-    "use strict";
-    this.addCmdListener = function(listener) {
-        if (this.cmdListeners.indexOf(listener) === -1)
-            this.cmdListeners.push(listener);
+    this.addCmdListener = function(listener, action) {
+        this.emitter.on(action || "command", listener);
     };
 
     this._createSocket = function(port, host, firstTask) {
         this.connecting = true;
         var socket = this.socket = Net.createConnection(port, host);
-        socket.setEncoding("utf8");
 
         socket.setTimeout(TIMEOUT, function() {
             if (this.onTimeout)
@@ -284,7 +273,7 @@ var Ftp = module.exports = function(cfg) {
 
         return function stream(next, stop) {
             source(function(data) {
-                var lines = data.replace(RE_NL_END, "").replace(RE_NL, NL).split(NL);
+                var lines = data.toString().replace(RE_NL_END, "").replace(RE_NL, NL).split(NL);
 
                 lines.forEach(function(line) {
                     var simpleRes = RE_RES.exec(line);
@@ -303,13 +292,7 @@ var Ftp = module.exports = function(cfg) {
                             }
                         }
 
-                        self.cmdListeners.forEach(function(listener) {
-                            listener({
-                                type: "response",
-                                code: code,
-                                text: line
-                            });
-                        });
+                        this.emitter.emit("response", ftpResponse.text);
                         next({ code: code, text: line });
                     }
                     else {
@@ -348,11 +331,11 @@ var Ftp = module.exports = function(cfg) {
             // Since the RFC is not respected by many servers, we are goiong to
             // overgeneralize and consider every value above 399 as an error.
             if (ftpResponse && ftpResponse.code > 399) {
-            	err = new Error(ftpResponse.text || "Unknown FTP error.")
-            	err.code = ftpResponse.code;
-            	callback(err);
+                err = new Error(ftpResponse.text || "Unknown FTP error.")
+                err.code = ftpResponse.code;
+                callback(err);
             } else {
-            	callback(null, ftpResponse);
+                callback(null, ftpResponse);
             }
         }
         this.nextCmd();
