@@ -1,7 +1,7 @@
 {
   "name": "jsftp",
   "id": "jsftp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A sane FTP client implementation for NodeJS",
   "keywords": [ "ftp", "protocol", "files", "server", "client", "async" ],
   "author": "Sergi Mansilla <sergi.mansilla@gmail.com> (http://sergimansilla.com)",
@@ -14,7 +14,7 @@
     "url": "https://github.com/sergi/jsftp/issues"
   },
   "dependencies": {
-    "gab": ">=0.0.2"
+    "streamer": "0.2.x"
   },
   "devDependencies": {
     "asyncjs": ">=0.0.5"
