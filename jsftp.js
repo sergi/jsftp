@@ -587,7 +587,7 @@ var Ftp = module.exports = function(cfg) {
     this.ls = function(filePath, callback) {
         var entriesToList = function(err, entries) {
             if (err)
-                return callback(err, entries);
+                return callback(err);
 
             if (!entries)
                 return callback(null, []);
@@ -613,11 +613,12 @@ var Ftp = module.exports = function(cfg) {
                 // 'STAT' command, which is set as default. We use 'LIST' instead,
                 // and we set the variable `useList` to true, to avoid extra round
                 // trips to the server to check.
-                if ((err && (data.code === 502 || data.code === 500)) ||
+                if ((err && data && (data.code === 502 || data.code === 500)) ||
                     // Not sure if the "hummingbird" system check ^^^ is still
                     // necessary. If they support any standards, the 500 error
                     // should have us covered. Let's leave it for now.
-                    (self.system && self.system.indexOf("hummingbird") > -1)) {
+                    (self.system && self.system.indexOf("hummingbird") > -1))
+                {
                     self.useList = true;
                     self.list(filePath, entriesToList);
                 }
