@@ -136,6 +136,9 @@ var Ftp = module.exports = function(cfg) {
     if (DEBUG_MODE) {
         this.emitter.on("command", this._log);
         this.emitter.on("response", this._log);
+        this.emitter.on("connect", this._log);
+        this.emitter.on("reconnect", this._log);
+        this.emitter.on("disconnect", this._log);
     }
 
     this.host = cfg.host;
@@ -148,7 +151,7 @@ var Ftp = module.exports = function(cfg) {
     // command into `cmds` list. This command will get paired with its response
     // once that one is received
     this.push = function(command, callback, onWriteCallback) {
-        if (!command || typeof command != "string")
+        if (!command || typeof command !== "string")
             return;
 
         var self = this;
@@ -160,23 +163,14 @@ var Ftp = module.exports = function(cfg) {
                 onWriteCallback();
         }
 
-        if (socket.writable) {
+        if (socket && socket.writable) {
             send();
         }
         else {
-            if (DEBUG_MODE)
-                console.log("FTP socket is not writable, reopening socket...");
-
             if (!this.connecting) {
-                this.connecting = true;
-
-                var reConnect = function() {
-                    self.connecting = false;
-                    send();
-                };
-
                 try {
-                    socket = this._createSocket(this.port, this.host, reConnect);
+                    socket = this._createSocket(this.port, this.host, send);
+                    this.emitter.emit("reconnect", "reconnect");
                     createStreams();
                 }
                 catch (e) {
@@ -196,7 +190,7 @@ var Ftp = module.exports = function(cfg) {
     };
 
     var cmds, tasks;
-    var createStreams = this.createStreams = function() {
+    var createStreams = function() {
         self.cmdQueue = queue();
         (self.nextCmd = function nextCmd() {
             S.head(self.cmdQueue)(function(obj) {
@@ -223,9 +217,7 @@ var Ftp = module.exports = function(cfg) {
         }, self.serverResponse(input)), S.append(S.list(null), cmds));
 
         tasks(self.parse.bind(self), function(err) {
-            if (DEBUG_MODE) {
-                console.log("Ftp socket closed its doors to the public.");
-            }
+            self.emitter.emit("disconnect", "disconnect");
         });
     };
 
@@ -239,24 +231,26 @@ var Ftp = module.exports = function(cfg) {
     };
 
     this._createSocket = function(port, host, firstTask) {
+        var self = this;
         this.connecting = true;
         var socket = this.socket = Net.createConnection(port, host);
 
         socket.setTimeout(TIMEOUT, function() {
-            if (this.onTimeout)
-                this.onTimeout(new Error("FTP socket timeout"));
+            if (self.onTimeout)
+                self.onTimeout(new Error("FTP socket timeout"));
 
-            this.destroy();
-        }.bind(this));
+            self.destroy();
+        });
 
-        var self = this;
         socket.on("connect", function() {
-            if (DEBUG_MODE) console.log("FTP socket connected");
-            firstTask && firstTask();
+            self.emitter.emit("connect");
+            if (firstTask) {
+                firstTask();
+            }
             self.connecting = false;
         });
 
-        return this.socket;
+        return socket;
     };
 
     /**
@@ -296,9 +290,25 @@ var Ftp = module.exports = function(cfg) {
                         next({ code: code, text: line });
                     }
                     else {
-                        if (!buffer.length && (multiRes = RE_MULTI.exec(line)))
+                        if (!buffer.length && (multiRes = RE_MULTI.exec(line))) {
                             currentCode = parseInt(multiRes[1], 10);
+                        }
+                        else if (buffer.length) {
+                            // It could happen that the end-of-multiline indicator
+                            // line has been truncated. We check the current line against
+                            // the previous line to check this case.
+                            var str = buffer[buffer.length - 1] + line;
+                            var re = RE_RES.exec(str);
+                            if (re && parseInt(re[1], 10) === currentCode) {
+                                buffer[buffer.length - 1] = str
+                                line = buffer.join(NL);
+                                buffer = [];
+                                currentCode = 0;
 
+                                self.emitter.emit("response", line);
+                                return next({ code: code, text: line });
+                            }
+                        }
                         buffer.push(line);
                     }
 
@@ -325,7 +335,6 @@ var Ftp = module.exports = function(cfg) {
         var command  = action[1];
         var callback = command[1];
         var err;
-
         if (callback) {
             // In FTP every response code above 399 means error in some way.
             // Since the RFC is not respected by many servers, we are goiong to
@@ -354,7 +363,7 @@ var Ftp = module.exports = function(cfg) {
     };
 
     this._log = function(msg) {
-        console.log("\n" + msg.text);
+        console.log("\n" + msg);
     };
 
     /**
@@ -407,7 +416,7 @@ var Ftp = module.exports = function(cfg) {
             this.dataConn.socket.destroy();
 
         this.features = null;
-        this.tasks    = null;
+        this.tasks = null;
         this.authenticated = false;
     };
 
@@ -588,9 +597,6 @@ var Ftp = module.exports = function(cfg) {
         var entriesToList = function(err, entries) {
             if (err)
                 return callback(err);
-
-            if (!entries)
-                return callback(null, []);
 
             callback(null,
                 (entries.text || entries)
