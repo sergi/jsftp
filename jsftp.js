@@ -558,9 +558,14 @@ var Ftp = module.exports = function(cfg) {
             mode: "I",
             cmd: "stor " + filePath,
             onCmdWrite: function() {
-                var socket = self.dataConn.socket;
-                if (socket.writable)
-                    socket.end(buffer);
+                if (self.dataConn) {
+                    var socket = self.dataConn.socket;
+                    if (socket.writable)
+                        socket.end(buffer);
+                }
+                else {
+                    console.log("FTP error: Couldn't retrieve PASV connection for command 'stor " + filePath + "'.");
+                }
             },
             pasvCallback: callback
         });
