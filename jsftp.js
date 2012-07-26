@@ -88,39 +88,22 @@ var Ftp = module.exports = function(cfg) {
         this.onConnect = cfg.onConnect;
     }
 
-    // Generate generic methods from parameter names. They can easily be
-    // overriden if we need special behavior. They accept any parameters given,
-    // it is the responsability of the user to validate the parameters.
     var self = this;
-    COMMANDS.forEach(function(cmd) {
-        var lcCmd = cmd.toLowerCase();
-        self.raw[lcCmd] = function() {
-            var callback;
-            var action = lcCmd;
+    var cmdfn = function(action, callback) {
+        clearInterval(self._keepAliveinterval);
+        if (action.indexOf("quit") !== 0) {
+            self.keepAlive();
+        }
 
-            if (arguments.length) {
-                var args = slice.call(arguments);
-
-                if (typeof args[args.length - 1] == "function")
-                    callback = args.pop();
-
-                if (args.length)
-                    action += " " + args.join(" ");
-            }
-
-            if (lcCmd === "quit" && self._keepAliveInterval)
-                clearInterval(self._keepAliveInterval);
-            else
-                self.keepAlive();
-
-            // Check whether the FTP user is authenticated at the moment of the
-            // enqueing. Ideally this should happen in the `push` method, just
-            // before writing to the socket, but that would be complicated,
-            // since we would have to 'unshift' the auth chain into the queue
-            // or play the raw auth commands (that is, without enqueuing in
-            // order to not mess up the queue order. Ideally, that would be
-            // built into the queue object. All this explanation to justify a
-            // slight slopiness in the code flow.
+        // check whether the ftp user is authenticated at the moment of the
+        // enqueing. ideally this should happen in the `push` method, just
+        // before writing to the socket, but that would be complicated,
+        // since we would have to 'unshift' the auth chain into the queue
+        // or play the raw auth commands (that is, without enqueuing in
+        // order to not mess up the queue order. ideally, that would be
+        // built into the queue object. all this explanation to justify a
+        // slight slopiness in the code flow.
+        var authAndEnqueue = function() {
             var isAuthCmd = /feat|user|pass/.test(action);
             if (!self.authenticated && !isAuthCmd) {
                 self.auth(self.options.user, self.options.pass, function() {
@@ -130,6 +113,37 @@ var Ftp = module.exports = function(cfg) {
             else {
                 enqueue(self.cmdQueue, [action, callback]);
             }
+        }
+
+        if (self.socket && self.socket.writable) {
+            authAndEnqueue();
+        }
+        else if (!self.connecting) {
+            self.authenticated = false;
+            self._createSocket(self.port, self.host, function(_socket) {
+                createStreams(_socket);
+                authAndEnqueue();
+            });
+        }
+    };
+
+    // generate generic methods from parameter names. they can easily be
+    // overriden if we need special behavior. they accept any parameters given,
+    // it is the responsability of the user to validate the parameters.
+    COMMANDS.forEach(function(cmd) {
+        cmd = cmd.toLowerCase();
+        self.raw[cmd] = function() {
+            var callback;
+            if (arguments.length) {
+                var args = slice.call(arguments);
+
+                if (typeof args[args.length - 1] === "function")
+                    callback = args.pop();
+
+                if (args.length)
+                    cmd += " " + args.join(" ");
+            }
+            cmdfn(cmd, callback || function(){});
         };
     });
 
@@ -144,8 +158,7 @@ var Ftp = module.exports = function(cfg) {
     this.host = cfg.host;
     this.port = cfg.port || FTP_PORT;
 
-    var socket = this._createSocket(this.port, this.host);
-    var cmd;
+    this._createSocket(this.port, this.host);
 
     // Writes a new command to the server, but before that it pushes the
     // command into `cmds` list. This command will get paired with its response
@@ -154,43 +167,25 @@ var Ftp = module.exports = function(cfg) {
         if (!command || typeof command !== "string")
             return;
 
-        var self = this;
-        function send() {
-            socket.write(command + "\r\n");
-            self.emitter.emit("command", self._sanitize(command));
+        this.socket.write(command + "\r\n");
+        self.emitter.emit("command", this._sanitize(command));
 
-            if (onWriteCallback)
-                onWriteCallback();
-        }
-
-        if (socket && socket.writable) {
-            send();
-        }
-        else {
-            if (!this.connecting) {
-                try {
-                    socket = this._createSocket(this.port, this.host, send);
-                    this.emitter.emit("reconnect", "reconnect");
-                    createStreams();
-                }
-                catch (e) {
-                    console.log(e);
-                }
-            }
-        }
+        if (onWriteCallback)
+            onWriteCallback(this.socket);
     };
 
-    // Stream of incoming data from the FTP server.
-    var input = function(next, stop) {
-        socket.on("connect", self.onConnect || function(){});
-        socket.on("data", next);
-        socket.on("end", stop);
-        socket.on("error", stop);
-        socket.on("close", stop);
-    };
+    var createStreams;
+    (createStreams = function(_socket) {
+        var cmd
+        // Stream of incoming data from the FTP server.
+        var input = function(next, stop) {
+            _socket.on("connect", self.onConnect || function(){});
+            _socket.on("data", next);
+            _socket.on("end", stop);
+            _socket.on("error", stop);
+            _socket.on("close", stop);
+        };
 
-    var cmds, tasks;
-    var createStreams = function() {
         self.cmdQueue = queue();
         (self.nextCmd = function nextCmd() {
             S.head(self.cmdQueue)(function(obj) {
@@ -199,30 +194,26 @@ var Ftp = module.exports = function(cfg) {
             });
         })();
 
-        // Stream of FTP commands from the client.
-        cmds = function(next, stop) {
-            cmd = next;
-        };
-
-        /**
-         * Zips (as in array zipping) commands with responses. This creates
-         * a stream that keeps yielding command/response pairs as soon as each pair
-         * becomes available.
-         */
-        tasks = S.zip(S.filter(function(x) {
-            // We ignore FTP marks for now. They don't convey useful
-            // information. A more elegant solution should be found in the
-            // future.
-            return !isMark(x.code);
-        }, self.serverResponse(input)), S.append(S.list(null), cmds));
+        // Zips (as in array zipping) commands with responses. This creates
+        // a stream that keeps yielding command/response pairs as soon as each pair
+        // becomes available.
+        var tasks = S.zip(S.filter(function(x) {
+                // We ignore FTP marks for now. They don't convey useful
+                // information. A more elegant solution should be found in the
+                // future.
+                return !isMark(x.code);
+            },
+            self.serverResponse(input)),
+            S.append(S.list(null), function(next, stop) {
+                // Stream of FTP commands from the client.
+                cmd = next;
+            })
+        );
 
         tasks(self.parse.bind(self), function(err) {
             self.emitter.emit("disconnect", "disconnect");
         });
-    };
-
-    createStreams();
-    this.cmd = cmd;
+    })(this.socket);
 };
 
 (function() {
@@ -231,26 +222,29 @@ var Ftp = module.exports = function(cfg) {
     };
 
     this._createSocket = function(port, host, firstTask) {
-        var self = this;
-        this.connecting = true;
-        var socket = this.socket = Net.createConnection(port, host);
+        if (this.socket && this.socket.destroy)
+            this.socket.destroy();
 
-        socket.setTimeout(TIMEOUT, function() {
+        this.connecting = true;
+        this.socket = Net.createConnection(port, host);
+
+        var self = this;
+        this.socket.setTimeout(TIMEOUT, function() {
             if (self.onTimeout)
                 self.onTimeout(new Error("FTP socket timeout"));
 
             self.destroy();
         });
 
-        socket.on("connect", function() {
-            self.emitter.emit("connect");
-            if (firstTask) {
-                firstTask();
-            }
+        this.socket.on("connect", function() {
             self.connecting = false;
+            self.emitter.emit("connect", "connect");
+            if (firstTask) {
+                firstTask(self.socket);
+            }
         });
 
-        return socket;
+        return this.socket;
     };
 
     /**
@@ -343,7 +337,8 @@ var Ftp = module.exports = function(cfg) {
                 err = new Error(ftpResponse.text || "Unknown FTP error.")
                 err.code = ftpResponse.code;
                 callback(err);
-            } else {
+            }
+            else {
                 callback(null, ftpResponse);
             }
         }
@@ -416,7 +411,6 @@ var Ftp = module.exports = function(cfg) {
             this.dataConn.socket.destroy();
 
         this.features = null;
-        this.tasks = null;
         this.authenticated = false;
     };
 

@@ -100,18 +100,18 @@ module.exports = {
 
     "test print working directory": function(next) {
         var ftp = this.ftp;
-            ftp.raw.pwd(function(err, res) {
+        ftp.raw.pwd(function(err, res) {
+            if (err) throw err;
+
+            var code = parseInt(res.code, 10);
+            assert.ok(code === 257, "PWD command was not successful");
+
+            ftp.raw.quit(function(err, res) {
                 if (err) throw err;
 
-                var code = parseInt(res.code, 10);
-                assert.ok(code === 257, "PWD command was not successful");
-
-                ftp.raw.quit(function(err, res) {
-                    if (err) throw err;
-
-                    next();
-                });
+                next();
             });
+        });
     },
     "test current working directory": function(next) {
         var ftp = this.ftp;
@@ -130,12 +130,12 @@ module.exports = {
                 });
 
                 ftp.raw.cwd("/unexistentDir/", function(err, res) {
-                	  if (err)
-                	  	  assert.ok(err);
-                	  else {
+                      if (err)
+                          assert.ok(err);
+                      else {
                         code = parseInt(res.code, 10);
                         assert.ok(code === 550, "A (wrong) CWD command was successful. It should have failed");
-                	  }
+                      }
                     next();
                 });
             });
@@ -378,8 +378,24 @@ module.exports = {
             if (++count == 6)
                 next();
         }
-    }
+    },
+    "test reconnect": function(next) {
+        var ftp = this.ftp;
+        ftp.raw.pwd(function(err, res) {
 
+            if (err) throw err;
+
+            var code = parseInt(res.code, 10);
+            assert.ok(code === 257, "PWD command was not successful");
+
+            ftp.socket.end();
+            ftp.raw.quit(function(err, res) {
+                if (err) throw err;
+
+                next();
+            });
+        });
+    },
 };
 
 !module.parent && require("asyncjs").test.testcase(module.exports, "FTP").exec();
