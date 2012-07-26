@@ -6,11 +6,11 @@
  */
 
 var Net = require("net");
+var Util = require("util");
+var EventEmitter = require("events").EventEmitter;
 var ftpPasv = require("./lib/ftpPasv");
 var Parser = require('./lib/ftpParser');
 var S = require("streamer");
-var Util = require("util");
-var EventEmitter = require("events").EventEmitter;
 
 var slice = Array.prototype.slice;
 
@@ -113,7 +113,7 @@ var Ftp = module.exports = function(cfg) {
             else {
                 enqueue(self.cmdQueue, [action, callback]);
             }
-        }
+        };
 
         if (self.socket && self.socket.writable) {
             authAndEnqueue();
@@ -134,6 +134,7 @@ var Ftp = module.exports = function(cfg) {
         cmd = cmd.toLowerCase();
         self.raw[cmd] = function() {
             var callback;
+            var completeCmd = cmd;
             if (arguments.length) {
                 var args = slice.call(arguments);
 
@@ -141,9 +142,9 @@ var Ftp = module.exports = function(cfg) {
                     callback = args.pop();
 
                 if (args.length)
-                    cmd += " " + args.join(" ");
+                    completeCmd += " " + args.join(" ");
             }
-            cmdfn(cmd, callback || function(){});
+            cmdfn(completeCmd, callback || function(){});
         };
     });
 
@@ -176,7 +177,7 @@ var Ftp = module.exports = function(cfg) {
 
     var createStreams;
     (createStreams = function(_socket) {
-        var cmd
+        var cmd;
         // Stream of incoming data from the FTP server.
         var input = function(next, stop) {
             _socket.on("connect", self.onConnect || function(){});
@@ -243,8 +244,6 @@ var Ftp = module.exports = function(cfg) {
                 firstTask(self.socket);
             }
         });
-
-        return this.socket;
     };
 
     /**
@@ -294,7 +293,7 @@ var Ftp = module.exports = function(cfg) {
                             var str = buffer[buffer.length - 1] + line;
                             var re = RE_RES.exec(str);
                             if (re && parseInt(re[1], 10) === currentCode) {
-                                buffer[buffer.length - 1] = str
+                                buffer[buffer.length - 1] = str;
                                 line = buffer.join(NL);
                                 buffer = [];
                                 currentCode = 0;
@@ -334,7 +333,7 @@ var Ftp = module.exports = function(cfg) {
             // Since the RFC is not respected by many servers, we are goiong to
             // overgeneralize and consider every value above 399 as an error.
             if (ftpResponse && ftpResponse.code > 399) {
-                err = new Error(ftpResponse.text || "Unknown FTP error.")
+                err = new Error(ftpResponse.text || "Unknown FTP error.");
                 err.code = ftpResponse.code;
                 callback(err);
             }
@@ -380,8 +379,7 @@ var Ftp = module.exports = function(cfg) {
     };
 
     this.hasFeat = function(feature) {
-        feature = feature.toLowerCase();
-        return this.features && (this.features.indexOf(feature) > -1);
+        return this.features.indexOf(feature.toLowerCase()) > -1;
     };
 
     /**
@@ -466,7 +464,8 @@ var Ftp = module.exports = function(cfg) {
                             notifyAll(new Error("Login not accepted"));
                         }
                     });
-                } else {
+                }
+                else {
                     self.authenticating = false;
                     notifyAll(new Error("Login not accepted"));
                 }
@@ -653,4 +652,3 @@ var Ftp = module.exports = function(cfg) {
     };
 
 }).call(Ftp.prototype);
-

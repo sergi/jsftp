@@ -395,7 +395,7 @@ module.exports = {
                 next();
             });
         });
-    },
+    }
 };
 
 !module.parent && require("asyncjs").test.testcase(module.exports, "FTP").exec();
