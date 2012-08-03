@@ -21,14 +21,14 @@ var RE_NL_END = /\r\n$/;
 var RE_NL = /\r\n/;
 
 var DEBUG_MODE = false;
-var TIMEOUT = 60000;
+var TIMEOUT = 10 * 60 * 1000;
 var IDLE_TIME = 30000;
 var COMMANDS = [
     // Commands without parameters
     "ABOR", "PWD", "CDUP", "FEAT", "NOOP", "QUIT", "PASV", "SYST",
     // Commands with one or more parameters
     "CWD", "DELE", "LIST", "MDTM", "MKD", "MODE", "NLST", "PASS", "RETR", "RMD",
-    "RNFR", "RNTO", "SITE", "STAT", "STOR", "TYPE", "USER", "PASS",
+    "RNFR", "RNTO", "SITE", "STAT", "STOR", "TYPE", "USER", "PASS", "XRMD",
     // Extended features
     "SYST", "CHMOD", "SIZE"
 ];
@@ -80,6 +80,7 @@ var Ftp = module.exports = function(cfg) {
     // quite a common operation, it is more efficient to avoid the round-trip
     // to the server.
     this.useList = false;
+    this.pasvCallBuffer = [];
 
     if (cfg) {
         this.onError = cfg.onError;
@@ -189,13 +190,15 @@ var Ftp = module.exports = function(cfg) {
         // Zips (as in array zipping) commands with responses. This creates
         // a stream that keeps yielding command/response pairs as soon as each pair
         // becomes available.
-        var tasks = S.zip(S.filter(function(x) {
-                // We ignore FTP marks for now. They don't convey useful
-                // information. A more elegant solution should be found in the
-                // future.
-                return !isMark(x.code);
-            },
-            self.serverResponse(input)),
+        var tasks = S.zip(
+            S.filter(function(x) {
+                    // We ignore FTP marks for now. They don't convey useful
+                    // information. A more elegant solution should be found in the
+                    // future.
+                    return !isMark(x.code);
+                },
+                self.serverResponse(input)
+            ),
             S.append(S.list(null), function(next, stop) {
                 // Stream of FTP commands from the client.
                 cmd = next;
@@ -318,13 +321,12 @@ var Ftp = module.exports = function(cfg) {
         var ftpResponse = action[0];
         var command  = action[1];
         var callback = command[1];
-        var err;
         if (callback) {
             // In FTP every response code above 399 means error in some way.
             // Since the RFC is not respected by many servers, we are goiong to
             // overgeneralize and consider every value above 399 as an error.
             if (ftpResponse && ftpResponse.code > 399) {
-                err = new Error(ftpResponse.text || "Unknown FTP error.");
+                var err = new Error(ftpResponse.text || "Unknown FTP error.");
                 err.code = ftpResponse.code;
                 callback(err);
             }
@@ -338,11 +340,7 @@ var Ftp = module.exports = function(cfg) {
     this._initialize = function(callback) {
         var self = this;
         this.raw.feat(function(err, response) {
-            if (err)
-                self.features = [];
-            else
-                self.features = self._parseFeats(response.text);
-
+            self.features = err ? [] : self._parseFeats(response.text);
             callback();
         });
     };
@@ -398,6 +396,8 @@ var Ftp = module.exports = function(cfg) {
 
         this.features = null;
         this.authenticated = false;
+        this.currentPasv = null;
+        this.pasvCallBuffer = [];
     };
 
     // Below this point all the methods are action helpers for FTP that compose
@@ -468,23 +468,57 @@ var Ftp = module.exports = function(cfg) {
      *
      * @param callback {function}: Function to execute when the data socket closes (either by success or by error).
      */
-    this.setPassive = function(callback) {
+    this.getPassiveSocket = function(callback) {
         var self = this;
-        var doPasv = function(err, res) {
-            if (err || res.code !== 227)
-                return callback(res.text);
 
-            var match = RE_PASV.exec(res.text);
-            if (!match)
-                return callback("PASV: Bad port");
+        // `_getPassive` retrieves a passive connection and sends its socket to
+        // the callback.
+        var _getPassive = function _getPassive(callback) {
+            var doPasv = function(err, res) {
+                if (err || res.code !== 227)
+                    return callback(res.text);
 
-            var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-            callback(null, Net.createConnection(port, self.host));
-        };
+                var match = RE_PASV.exec(res.text);
+                if (!match)
+                    return callback("PASV: Bad port");
 
-        this.raw.type("I", function(err, res) {
-            enqueue(self.cmdQueue, ["pasv", doPasv]);
-        });
+                var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
+                // Executes the next passive call, if there are any.
+                var nextPasv = function nextPasv(err) {
+                    self.currentPasv = null;
+                    if (self.pasvCallBuffer && self.pasvCallBuffer.length) {
+                        self.currentPasv = self.pasvCallBuffer.shift();
+                        self.currentPasv();
+                    }
+                };
+
+                var socket = Net.createConnection(port, self.host);
+                // On each one of the events below we want to move on to the
+                // next passive call, if any.
+                socket.on("close", nextPasv);
+                socket.on("end", nextPasv);
+                socket.on("error", nextPasv);
+
+                // Send the passive socket to the callback.
+                callback(null, socket);
+            };
+
+            self.raw.type("I", function(err, res) {
+                enqueue(self.cmdQueue, ["pasv", doPasv]);
+            });
+        }
+
+        // If there is a passive call happening, we put the requested passive
+        // call in the passive call buffer, to be executed later.
+        if (this.currentPasv) {
+            this.pasvCallBuffer.push(function() { _getPassive(callback); });
+        }
+        // otherwise, execute right away because there is no passive calls
+        // occuring right now.
+        else {
+            this.currentPasv = function() { _getPassive(callback); };
+            this.currentPasv();
+        }
     };
 
     /**
@@ -499,7 +533,7 @@ var Ftp = module.exports = function(cfg) {
         }
 
         var cmdQueue = this.cmdQueue;
-        this.setPassive(function(err, socket) {
+        this.getPassiveSocket(function(err, socket) {
             concatStream(err, socket, callback);
             enqueue(cmdQueue, ["list " + filePath]);
         });
@@ -507,24 +541,49 @@ var Ftp = module.exports = function(cfg) {
 
     this.get = function(filePath, callback) {
         var cmdQueue = this.cmdQueue;
-        this.setPassive(function(err, socket) {
+        this.getPassiveSocket(function(err, socket) {
             concatStream(err, socket, callback);
             enqueue(cmdQueue, ["retr " + filePath]);
         });
     };
 
-    this.put = function(filePath, buffer, callback) {
+    this.getGetSocket = function(path, callback) {
+        var self = this;
+        this.getPassiveSocket(function(err, socket) {
+            if (err)
+                callback(err);
+            // Pause the socket to avoid data streaming before there are any
+            // listeners to it. We'll let the API consumer resume it.
+            if (socket.pause)
+                socket.pause();
+
+            callback(err, socket);
+            enqueue(self.cmdQueue, ["retr " + path]);
+        });
+    };
+
+    this.put = function(filepath, buffer, callback) {
         var cmdQueue = this.cmdQueue;
-        this.setPassive(function(err, socket) {
-            enqueue(cmdQueue, ["stor " + filePath]);
+        this.getPassiveSocket(function(err, socket) {
+            enqueue(cmdQueue, ["stor " + filepath]);
             setTimeout(function() {
                 if (socket && socket.writable) {
                     socket.end(buffer);
                     callback();
                 }
                 else {
-                    console.log("FTP error: Couldn't retrieve PASV connection for command 'stor " + filePath + "'.");
+                    console.log("ftp error: couldn't retrieve pasv connection for command 'stor " + filepath + "'.");
                 }
+            }, 100);
+        });
+    };
+
+    this.getPutSocket = function(filepath, callback) {
+        var self = this;
+        this.getPassiveSocket(function(err, socket) {
+            enqueue(self.cmdQueue, ["stor " + filepath]);
+            setTimeout(function() {
+                callback(err, socket);
             }, 100);
         });
     };
