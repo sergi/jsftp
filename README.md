@@ -133,7 +133,7 @@ commands might accept parameters or not, but they always accept a callback
 with the signature `err, data`, in which `err` is the error response coming
 from the server (usually a 4xx or 5xx error code) and the data is an object
 that contains two properties: `code` and `text`. `code` is an integer indicating
-the response code of the response and `text` is the response stgring itself.
+the response code of the response and `text` is the response string itself.
 
 #### Ftp.auth(username, password, callback)
 Authenticates the user with the given username and password. If null or empty
@@ -155,7 +155,7 @@ written in the remote file.
 Renames a file in the server. `from` and `to` are both filepaths.
 
 #### Ftp.ls(filePath, callback)
-Lists information about files or directories and yields an array of file objects with parsed file properties to the callback. You should use this function instead of `stat` or `list` in case you need to do something with the individual files properties.
+Lists information about files or directories and yields an array of file objects with parsed file properties to the callback. You should use this function instead of `stat` or `list` in case you need to do something with the individual file properties.
 
 #### Ftp.keepAlive()
 Refreshes the interval thats keep the server connection active. There is no

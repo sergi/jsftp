@@ -23,10 +23,10 @@ var FTPCredentials = {
     pass: "12345"
 };
 
-var CWD = process.cwd();
-var remoteCWD = "test_c9";
+var CWD = process.cwd() + "/test";
+var remoteCWD = "test/test_c9";
 var daemon;
-exec('mkdir', [__dirname + "/test_c9"]);
+exec('mkdir', [__dirname + "/" + remoteCWD]);
 
 module.exports = {
     timeout: 10000,
@@ -108,7 +108,7 @@ module.exports = {
     "test current working directory": function(next) {
         var ftp = this.ftp;
         ftp.raw.cwd(remoteCWD, function(err, res) {
-            if (err) throw err;
+            assert.ok(!err, err);
 
             var code = parseInt(res.code, 10);
             assert.ok(code === 200 || code === 250, "CWD command was not successful");
@@ -191,23 +191,23 @@ module.exports = {
 
         var filePath = remoteCWD + "/file_ftp_test.txt";
         var ftp = this.ftp;
-            Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
-                var buffer = new Buffer(data, "binary");
-                ftp.put(filePath, buffer, function(err, res) {
-                    assert.ok(!err, err);
+        Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
+            var buffer = new Buffer(data, "binary");
+            ftp.put(filePath, buffer, function(err, res) {
+                assert.ok(!err, err);
 
-                    ftp.ls(filePath, function(err, res) {
+                ftp.ls(filePath, function(err, res) {
+                    assert.ok(!err);
+                    assert.equal(buffer.length, Fs.statSync(CWD + "/jsftp_test.js").size);
+
+                    ftp.raw.dele(filePath, function(err, data) {
                         assert.ok(!err);
-                        assert.equal(buffer.length, Fs.statSync(CWD + "/jsftp_test.js").size);
 
-                        ftp.raw.dele(filePath, function(err, data) {
-                            assert.ok(!err);
-
-                            next();
-                        });
+                        next();
                     });
                 });
             });
+        });
     },
 
     "test rename a file": function(next) {
@@ -217,6 +217,7 @@ module.exports = {
         var to = remoteCWD + "/file_ftp_test_renamed.txt";
         var ftp = this.ftp;
             Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
+                assert.ok(!err, err);
                 var buffer = new Buffer(data, "binary");
                 ftp.put(from, buffer, function(err, res) {
                     assert.ok(!err, err);
@@ -244,6 +245,7 @@ module.exports = {
         var remotePath = remoteCWD + "/" + fileName + ".test";
 
         Fs.readFile(localPath, "binary", function(err, data) {
+            assert.ok(!err, err);
             var buffer = new Buffer(data, "binary");
             ftp.put(remotePath, buffer, function(err, res) {
                 assert.ok(!err, err);
