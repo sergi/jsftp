@@ -34,7 +34,7 @@ module.exports = {
     setUp: function(next) {
         if (FTPCredentials.host === "localhost") {
             try {
-                daemon = exec('python', ['test/pyftpdlib/basic_ftpd.py']);
+                daemon = exec('python', ['test/basic_ftpd.py']);
             }
             catch(e) {
                 console.log(
