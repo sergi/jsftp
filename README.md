@@ -113,10 +113,6 @@ Port number for the current FTP server (defaults to 21).
 
 NodeJS socket for the current FTP server.
 
-#### Ftp.dataConn
-
-NodeJS socket for the current passive connection, if any.
-
 #### Ftp.features
 
 `features` is an array of feature names for the current FTP server. It is
@@ -125,7 +121,7 @@ generated when the user authenticates with the `auth` method.
 
 ### Methods
 
-#### Ftp.raw["FTP_COMMAND"]([params], callback)
+#### Ftp.raw.FTP_COMMAND([params], callback)
 All the standard FTP commands are available under the `raw` namespace. These
 commands might accept parameters or not, but they always accept a callback
 with the signature `err, data`, in which `err` is the error response coming
