@@ -93,7 +93,7 @@ ftp.raw.rmd("/example_dir", function(err, data) {
 ```
 
 You can find more usage examples in the unit tests for it. This documentation
-will grow as jsftp evolves, I promise!
+will grow as jsftp evolves.
 
 
 API
@@ -125,7 +125,7 @@ generated when the user authenticates with the `auth` method.
 
 ### Methods
 
-#### Ftp.raw.FTP_COMMAND([params], callback)
+#### Ftp.raw["FTP_COMMAND"]([params], callback)
 All the standard FTP commands are available under the `raw` namespace. These
 commands might accept parameters or not, but they always accept a callback
 with the signature `err, data`, in which `err` is the error response coming
@@ -175,22 +175,12 @@ From GitHub:
 Tests
 -----
 
-The test script fires up by default the FTP server that comes with OSX. You
-will have to put your OSX user credentials in `jsftp_test.js` if you want to
-run it. If you are not on OSX, feel free to change the FTP host, port and
-credentials to point to a remote server.
+To run the tests from the command line:
 
-To run the tests in the command line:
+    node test/jsftp_test.js
 
-    node jsftp_test.js
-
-If tests are failing it might be that your user doesn't have enough rights to
-run the FTP service. In that case you should run the tests as `sudo`:
-
-    sudo node jsftp_test.js
-
-Please note that running scripts as sudo is dangerous and you will grant the
-script to do anything in your server. You should do it at your own risk.
+Please note that for now the unit tests require python because the FTP server
+used is written in python. In the future this dependency will not be there.
 
 
 License
