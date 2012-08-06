@@ -159,15 +159,15 @@ module.exports = {
 
         var newDir = remoteCWD + "/ftp_test_dir";
         var ftp = this.ftp;
-            ftp.raw.mkd(newDir, function(err, res) {
-                assert.ok(!err);
-            assert.equal(res.code, 257);
+        ftp.raw.mkd(newDir, function(err, res) {
+            assert.ok(!err);
+        assert.equal(res.code, 257);
 
-                ftp.raw.rmd(newDir, function(err, res) {
-                    assert.ok(!err);
-                    next();
-                });
+            ftp.raw.rmd(newDir, function(err, res) {
+                assert.ok(!err);
+                next();
             });
+        });
     },
 
     "test create and delete a directory containing a space": function(next) {
@@ -175,15 +175,15 @@ module.exports = {
 
         var newDir = remoteCWD + "/ftp test dür";
         var ftp = this.ftp;
-            ftp.raw.mkd(newDir, function(err, res) {
-                assert.ok(!err);
+        ftp.raw.mkd(newDir, function(err, res) {
+            assert.ok(!err);
             assert.equal(res.code, 257);
 
-                ftp.raw.rmd(newDir, function(err, res) {
-                    assert.ok(!err);
-                    next();
-                });
+            ftp.raw.rmd(newDir, function(err, res) {
+                assert.ok(!err);
+                next();
             });
+        });
     },
 
     "test create and delete a file": function(next) {

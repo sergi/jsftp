@@ -1,3 +1,6 @@
+*.c9save
 *.swp
 *~
 *.bak
+*.pyc
+node_modules
