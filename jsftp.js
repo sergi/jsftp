@@ -478,26 +478,24 @@ var Ftp = module.exports = function(cfg) {
                 if (err || res.code !== 227)
                     return callback(res.text);
 
+                // Executes the next passive call, if there are any.
+                var nextPasv = function nextPasv(err) {
+                    self.currentPasv = null;
+                    if (self.pasvCallBuffer.length) {
+                        self.currentPasv = self.pasvCallBuffer.shift();
+                        self.currentPasv(callback);
+                    }
+                };
+
                 var match = RE_PASV.exec(res.text);
                 if (!match)
                     return callback("PASV: Bad port");
 
                 var port = (parseInt(match[1], 10) & 255) * 256 + (parseInt(match[2], 10) & 255);
-                // Executes the next passive call, if there are any.
-                var nextPasv = function nextPasv(err) {
-                    self.currentPasv = null;
-                    if (self.pasvCallBuffer && self.pasvCallBuffer.length) {
-                        self.currentPasv = self.pasvCallBuffer.shift();
-                        self.currentPasv();
-                    }
-                };
-
                 var socket = Net.createConnection(port, self.host);
                 // On each one of the events below we want to move on to the
                 // next passive call, if any.
                 socket.on("close", nextPasv);
-                socket.on("end", nextPasv);
-                socket.on("error", nextPasv);
 
                 // Send the passive socket to the callback.
                 callback(null, socket);
@@ -510,14 +508,15 @@ var Ftp = module.exports = function(cfg) {
 
         // If there is a passive call happening, we put the requested passive
         // call in the passive call buffer, to be executed later.
+        var fn = function() { _getPassive(callback); };
         if (this.currentPasv) {
-            this.pasvCallBuffer.push(function() { _getPassive(callback); });
+            this.pasvCallBuffer.push(fn);
         }
         // otherwise, execute right away because there is no passive calls
         // occuring right now.
         else {
-            this.currentPasv = function() { _getPassive(callback); };
-            this.currentPasv();
+            this.currentPasv = fn;
+            this.currentPasv(callback);
         }
     };
 

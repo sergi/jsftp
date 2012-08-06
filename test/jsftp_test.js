@@ -10,7 +10,7 @@
 var assert = require("assert");
 var Fs = require("fs");
 var exec = require('child_process').spawn;
-var Ftp = require("./jsftp");
+var Ftp = require("../jsftp");
 var Path = require("path");
 
 // Write down your system credentials. This test suite will use OSX internal
@@ -18,31 +18,29 @@ var Path = require("path");
 // `host` and `port` properties as well.
 var FTPCredentials = {
     host: "localhost",
-    user: "",
-    port: 21,
-    pass: ""
+    user: "user",
+    port: 3334,
+    pass: "12345"
 };
 
 var CWD = process.cwd();
-// Substitute "test_c9" by a real directory in your remote FTP server.
-var remoteCWD = FTPCredentials.host === "localhost" ? CWD : "test_c9";
-console.log("Current working directory is " + CWD + "\n");
+var remoteCWD = "test_c9";
+var daemon;
+exec('mkdir', [__dirname + "/test_c9"]);
 
-// Execution ORDER: test.setUpSuite, setUp, testFn, tearDown, test.tearDownSuite
 module.exports = {
     timeout: 10000,
 
     setUp: function(next) {
         if (FTPCredentials.host === "localhost") {
             try {
-                exec('/bin/launchctl', ['load', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
+                daemon = exec('python', ['test/pyftpdlib/basic_ftpd.py']);
             }
             catch(e) {
                 console.log(
-                    "There was a problem trying to start the FTP service."
-                    + " . This could be because you are not on OSX, or because "
-                    + "you don't have enough permissions to run the FTP service"
-                    + " on the given port.\n\n" + e
+                    "There was a problem trying to start the FTP service." +
+                    " . This could be because you don't have enough permissions" +
+                    "to run the FTP service on the given port.\n\n" + e
                 );
             }
         }
@@ -55,14 +53,8 @@ module.exports = {
     },
 
     tearDown: function(next) {
-        if (FTPCredentials.host === "localhost") {
-            try {
-                exec('/bin/launchctl', ['unload', '-w', '/System/Library/LaunchDaemons/ftp.plist']);
-            }
-            catch (e) {
-                console.log("The FTP service could not be stopped. Do you have enough permissions?");
-            }
-        }
+        if (daemon)
+            daemon.kill();
 
         var self = this;
         setTimeout(function() {
@@ -115,30 +107,30 @@ module.exports = {
     },
     "test current working directory": function(next) {
         var ftp = this.ftp;
-            ftp.raw.cwd(remoteCWD, function(err, res) {
+        ftp.raw.cwd(remoteCWD, function(err, res) {
+            if (err) throw err;
+
+            var code = parseInt(res.code, 10);
+            assert.ok(code === 200 || code === 250, "CWD command was not successful");
+
+            ftp.raw.pwd(function(err, res) {
                 if (err) throw err;
 
                 var code = parseInt(res.code, 10);
-                assert.ok(code === 200 || code === 250, "CWD command was not successful");
-
-                ftp.raw.pwd(function(err, res) {
-                    if (err) throw err;
-
-                    var code = parseInt(res.code, 10);
-                    assert.ok(code === 257, "PWD command was not successful");
-                    assert.ok(res.text.indexOf(remoteCWD), "Unexpected CWD");
-                });
-
-                ftp.raw.cwd("/unexistentDir/", function(err, res) {
-                      if (err)
-                          assert.ok(err);
-                      else {
-                        code = parseInt(res.code, 10);
-                        assert.ok(code === 550, "A (wrong) CWD command was successful. It should have failed");
-                      }
-                    next();
-                });
+                assert.ok(code === 257, "PWD command was not successful");
+                assert.ok(res.text.indexOf(remoteCWD), "Unexpected CWD");
             });
+
+            ftp.raw.cwd("/unexistentDir/", function(err, res) {
+                  if (err)
+                      assert.ok(err);
+                  else {
+                    code = parseInt(res.code, 10);
+                    assert.ok(code === 550, "A (wrong) CWD command was successful. It should have failed");
+                  }
+                next();
+            });
+        });
     },
     "test passive listing of current directory": function(next) {
         this.ftp.list(remoteCWD, function(err, res){
@@ -251,21 +243,21 @@ module.exports = {
         var localPath = CWD + "/" + fileName;
         var remotePath = remoteCWD + "/" + fileName + ".test";
 
-            Fs.readFile(localPath, "binary", function(err, data) {
-                var buffer = new Buffer(data, "binary");
-                ftp.put(remotePath, buffer, function(err, res) {
+        Fs.readFile(localPath, "binary", function(err, data) {
+            var buffer = new Buffer(data, "binary");
+            ftp.put(remotePath, buffer, function(err, res) {
+                assert.ok(!err, err);
+                ftp.get(remotePath, function(err, data) {
                     assert.ok(!err, err);
-                    ftp.get(remotePath, function(err, data) {
-                        assert.ok(!err, err);
 
-                        assert.equal(buffer.length, data.length);
-                        ftp.raw.dele(remotePath, function(err, data) {
-                            assert.ok(!err);
-                            next();
-                        });
+                    assert.equal(buffer.length, data.length);
+                    ftp.raw.dele(remotePath, function(err, data) {
+                        assert.ok(!err);
+                        next();
                     });
                 });
             });
+        });
     },
 
     "test get two files synchronously": function(next) {
@@ -273,21 +265,21 @@ module.exports = {
         var filePath = remoteCWD + "/testfile.txt";
         var counter = 0;
 
-            ftp.put(filePath, new Buffer("test"), handler);
-            ftp.get(filePath, function(err, data) {
-                assert.ok(!err, err);
-                assert.ok(data);
-            });
+        ftp.put(filePath, new Buffer("test"), handler);
+        ftp.get(filePath, function(err, data) {
+            assert.ok(!err, err);
+            assert.ok(data);
+        });
 
-            ftp.put(filePath, new Buffer("test"), handler);
-            ftp.get(filePath, function(err, data) {
-                    assert.ok(!err, err);
-                    assert.ok(data);
+        ftp.put(filePath, new Buffer("test"), handler);
+        ftp.get(filePath, function(err, data) {
+            assert.ok(!err, err);
+            assert.ok(data);
             assert.equal(counter, 2);
             next();
-            });
+        });
 
-            function handler() { counter++; };
+        function handler() { counter++;};
     },
 
     "test get fileList array": function(next) {
@@ -333,33 +325,33 @@ module.exports = {
         var file2 = "testfile2.txt";
         var file3 = "testfile3.txt";
 
-            ftp.raw.pwd(function(err, res) {
-                var parent, pathDir, path1, path2, path3;
-                if (remoteCWD.charAt(0) !== "/") {
-                    parent = /.*"(.*)".*/.exec(res.text)[1];
-                    pathDir = Path.resolve(parent + "/" + remoteCWD);
-                    path1 = Path.resolve(pathDir + "/" + file1);
-                    path2 = Path.resolve(pathDir + "/" + file2);
-                    path3 = Path.resolve(pathDir + "/" + file3);
-                }
-                else {
-                    pathDir = remoteCWD;
-                    path1 = Path.resolve(remoteCWD + "/" + file1);
-                    path2 = Path.resolve(remoteCWD + "/" + file2);
-                    path3 = Path.resolve(remoteCWD + "/" + file3);
-                }
+        ftp.raw.pwd(function(err, res) {
+            var parent, pathDir, path1, path2, path3;
+            if (remoteCWD.charAt(0) !== "/") {
+                parent = /.*"(.*)".*/.exec(res.text)[1];
+                pathDir = Path.resolve(parent + "/" + remoteCWD);
+                path1 = Path.resolve(pathDir + "/" + file1);
+                path2 = Path.resolve(pathDir + "/" + file2);
+                path3 = Path.resolve(pathDir + "/" + file3);
+            }
+            else {
+                pathDir = remoteCWD;
+                path1 = Path.resolve(remoteCWD + "/" + file1);
+                path2 = Path.resolve(remoteCWD + "/" + file2);
+                path3 = Path.resolve(remoteCWD + "/" + file3);
+            }
 
-                ftp.put(path1, new Buffer("test"), handler);
-                ftp.put(path2, new Buffer("test"), handler);
-                ftp.put(path3, new Buffer("test"), handler);
+            ftp.put(path1, new Buffer("test"), handler);
+            ftp.put(path2, new Buffer("test"), handler);
+            ftp.put(path3, new Buffer("test"), handler);
 
-                var count = 0;
-                function handler(err, res) {
-                assert.ok(!err);
-                    if (++count == 3)
-                        next();
-                }
-            });
+            var count = 0;
+            function handler(err, res) {
+            assert.ok(!err);
+                if (++count == 3)
+                    next();
+            }
+        });
     },
     "test stat and pasv calls in parallel without auth": function(next) {
         var ftp = this.ftp;
