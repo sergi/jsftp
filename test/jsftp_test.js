@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /*
  * @package jsftp
  * @copyright Copyright(c) 2011 Ajax.org B.V. <info AT ajax DOT org>
