@@ -322,10 +322,13 @@ var Ftp = module.exports = function(cfg) {
         var command  = action[1];
         var callback = command[1];
         if (callback) {
+            if (!ftpResponse) {
+                callback(new Error("FTP response not defined"));
+            }
             // In FTP every response code above 399 means error in some way.
-            // Since the RFC is not respected by many servers, we are goiong to
+            // Since the RFC is not respected by many servers, we are going to
             // overgeneralize and consider every value above 399 as an error.
-            if (ftpResponse && ftpResponse.code > 399) {
+            else if (ftpResponse && ftpResponse.code > 399) {
                 var err = new Error(ftpResponse.text || "Unknown FTP error.");
                 err.code = ftpResponse.code;
                 callback(err);
