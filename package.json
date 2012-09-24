@@ -24,7 +24,7 @@
     "node": ">=0.4"
   },
   "scripts": {
-    "test": "mocha -R spec -t 1000"
+    "test": "mocha -R spec -t 5000"
   },
   "licenses": [{
     "type" : "MIT",
