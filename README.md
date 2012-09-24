@@ -34,51 +34,48 @@ Usage examples
 --------------
 
 ```javascript
+var Ftp = require("jsftp");
+
 // Initialize some common variables
 var user = "johndoe";
 var pass = "12345";
 
 var ftp = new Ftp({
     host: "myhost.com",
-    port: 21, // The port defaults to 21, but let's include it anyway.
+    user: user,
+    port: 3334, // The port defaults to 21
+    pass: pass
 });
 
 
-// First, we authenticate the user
-ftp.auth(user, pass, function(err, res) {
-    if (err) throw err;
+// Retrieve a file in the remote server. When the file has been retrieved,
+// the callback will be called with `data` being the Buffer with the
+// contents of the file.
 
-    // Retrieve a file in the remote server. When the file has been retrieved,
-    // the callback will be called with `data` being the Buffer with the
-    // contents of the file.
+// `ftp.get` is a convenience method. In this case, it hides the actual 
+// complexity of setting up passive mode and retrieving files.
+ftp.get("/folder/file.ext", function(err, data) {
+    if (err) 
+        console.error(err);
 
-    // This is a convenience method that hides the actual complexity of setting
-    // up passive mode and retrieving files.
+    // Do something with the buffer
+    doSomething(data);
 
-    ftp.get("/folder/file.ext", function(err, data) {
-        if (err) throw err;
+    // We can use raw FTP commands directly as well. In this case we use FTP
+    // 'QUIT' method, which accepts no parameters and returns the farewell
+    // message from the server
+    ftp.raw.quit(function(err, res) {
+        if (err) 
+            console.error(err);
 
-        // Do something with the buffer
-        doSomething(data);
-
-        // We can use raw FTP commands directly as well. In this case we use FTP
-        // 'QUIT' method, which accepts no parameters and returns the farewell
-        // message from the server
-        ftp.raw.quit(function(err, res) {
-            if (err) throw err;
-
-            console.log("FTP session finalized! See you soon!");
-        });
+        console.log("FTP session finalized! See you soon!");
     });
 });
-
-// The following code assumes that you have authenticated the user, just like
-// I did in the code above.
 
 // Create a directory
 ftp.raw.mkd("/example_dir", function(err, data) {
     if (err)
-        throw err;
+        console.error(err);
 
     console.log(data.text);
 });
@@ -86,13 +83,13 @@ ftp.raw.mkd("/example_dir", function(err, data) {
 // Delete a directory
 ftp.raw.rmd("/example_dir", function(err, data) {
     if (err)
-        throw err;
+        console.error(err);
 
     console.log(data.text);
 });
 ```
 
-You can find more usage examples in the unit tests for it. This documentation
+You can find more usage examples in the [unit tests](https://github.com/sergi/jsftp/blob/master/test/jsftp_test.js). This documentation
 will grow as jsftp evolves.
 
 
@@ -171,9 +168,9 @@ From GitHub:
 Tests
 -----
 
-To run the tests from the command line:
+To run the tests:
 
-    node test/jsftp_test.js
+    npm test
 
 Please note that for now the unit tests require python because the FTP server
 used is written in python. In the future this dependency will not be there.
