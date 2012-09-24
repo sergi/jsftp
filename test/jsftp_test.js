@@ -58,7 +58,7 @@ describe("jsftp file listing parser", function() {
                 type: 0,
                 size: 260,
                 name: ".alias",
-                time: 1206399600000,
+                time: +new Date("Mar 25  2008"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -79,7 +79,7 @@ describe("jsftp file listing parser", function() {
                 type: 0,
                 size: 2219,
                 name: ".bash_history",
-                time: 1283637600000,
+                time: +new Date("Sep  5  2010"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -99,7 +99,7 @@ describe("jsftp file listing parser", function() {
                 type: 0,
                 size: 55,
                 name: ".bashrc",
-                time: 1206399600000,
+                time: +new Date("Mar 25  2008"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -159,7 +159,7 @@ describe("jsftp file listing parser", function() {
                 type: 0,
                 size: 68491314,
                 name: "Documents.zip",
-                time: 1232578800000,
+                time: +new Date("Jan 22  2009"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -179,7 +179,7 @@ describe("jsftp file listing parser", function() {
                 type: 0,
                 size: 141,
                 name: "EcPxMptYISIdOSjS.XFV.Q--.html",
-                time: 1225494000000,
+                time: +new Date("Nov  1  2008"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -238,7 +238,7 @@ describe("jsftp file listing parser", function() {
             {
                 type: 0,
                 size: 312115,
-                time: 1232578800000,
+                time: +new Date("Jan 22  2009"),
                 name: "restaurants.csv",
                 owner: "mrclash",
                 group: "pg223090",
@@ -278,7 +278,7 @@ describe("jsftp file listing parser", function() {
             {
                 type: 1,
                 size: 4096,
-                time: 1249250400000,
+                time: +new Date("Aug  3  2009"),
                 name: "svn",
                 owner: "mrclash",
                 group: "pg223090",
@@ -472,21 +472,21 @@ describe("jsftp file listing parser", function() {
                 line: '04-27-00  09:09PM       <DIR>          licensed',
                 type: 1,
                 size: 0,
-                time: 956862540000,
+                time: +(new Date("04-27-00  09:09 PM")),
                 name: 'licensed',
             },
             {
                 line: '11-18-03  10:16AM       <DIR>          pub',
                 type: 1,
                 size: 0,
-                time: 1069146960000,
+                time: +(new Date("11-18-03  10:16 AM")),
                 name: 'pub',
             },
             {
                 line: '04-14-99  03:47PM                  589 readme.htm',
                 type: 0,
                 size: 589,
-                time: 924097620000,
+                time: +(new Date("04-14-99  03:47 PM")),
                 name: 'readme.htm'
             }
         ];
