@@ -19,10 +19,10 @@ var Path = require("path");
 // FTP server. If you want to test against a remote server, simply change the
 // `host` and `port` properties as well.
 var FTPCredentials = {
-    host: "localhost",
-    user: "user",
-    port: 3334,
-    pass: "12345"
+    host: "10.0.2.15",
+    user: "sergi",
+    port: 21,
+    pass: "1234"
 };
 
 var CWD = process.cwd() + "/test";
@@ -804,22 +804,14 @@ describe("jsftp test suite", function() {
 
         ftp.raw.pwd(function(err, res) {
             var parent, pathDir, path;
-            if (remoteCWD.charAt(0) !== "/") {
-                parent = /.*"(.*)".*/.exec(res.text)[1];
-                pathDir = Path.resolve(parent + "/" + remoteCWD);
-                path = Path.resolve(pathDir + "/" + file1);
-            }
-            else {
-                pathDir = remoteCWD;
-                path = Path.resolve(remoteCWD + "/" + file1);
-            }
+	    var path = remoteCWD + "/" + file1;
 
             ftp.put(path, new Buffer("test"), function(err, res) {
                 assert.ok(!err);
 
-                ftp.raw.cwd(pathDir, function(err, res) {
+                ftp.raw.cwd(remoteCWD + "/", function(err, res) {
                     ftp.ls(".", function(err, res) {
-                        assert.ok(!err);
+                        assert.ok(!err, err);
 
                         assert.ok(Array.isArray(res));
 
