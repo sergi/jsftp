@@ -1,10 +1,10 @@
 {
   "name": "jsftp",
   "id": "jsftp",
-  "version": "0.1.6",
+  "version": "0.4.7",
   "description": "A sane FTP client implementation for NodeJS",
-  "keywords": [ "ftp", "streams", "files", "server", "client", "async" ],
-  "author": "Sergi Mansilla <sergi.mansilla@gmail.com>",
+  "keywords": [ "ftp", "protocol", "files", "server", "client", "async" ],
+  "author": "Sergi Mansilla <sergi.mansilla@gmail.com> (http://sergimansilla.com)",
   "homepage": "https://github.com/sergi/jsftp",
   "repository": {
     "type": "git",
@@ -14,17 +14,17 @@
     "url": "https://github.com/sergi/jsftp/issues"
   },
   "dependencies": {
-    "streamer": "~0.2.1"
+    "streamer": "0.2.x"
   },
   "devDependencies": {
-    "asyncjs": "~0.0.5"
+    "mocha": "~1.5.0"
   },
   "main": "./jsftp.js",
   "engines": {
-    "node": ">=0.4.x"
+    "node": ">=0.4"
   },
   "scripts": {
-    "test": "node jsftp_test.js"
+    "test": "mocha -R spec -t 5000"
   },
   "licenses": [{
     "type" : "MIT",

@@ -1,26 +1,17 @@
 /*
- * @package jsFTP
+ * @package jsftp
  * @copyright Copyright(c) 2011 Ajax.org B.V. <info AT ajax DOT org>
- * @author Sergi Mansilla <sergi DOT mansilla AT gmail DOT com>
+ * @author Sergi Mansilla <sergi.mansilla@gmail.com>
  * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
  */
 
 "use strict";
 
 var assert = require("assert");
-var Parser = require('./ftpParser');
+var Parser = require('../lib/ftpParser');
 
-module.exports = {
-
-    timeout: 500,
-
-    setUp : function(next) {
-    },
-
-    tearDown : function(next) {
-    },
-
-    "test ftp unix LIST responses" : function(next) {
+describe("jsftp file listing parser", function() {
+    it("test ftp unix LIST responses", function() {
         var str = "211-Status of /:\r\n\
  drwx--x---  10 mrclash  adm          4096 Aug  9 14:48 .\r\n\
  drwx--x---  10 mrclash  adm          4096 Aug  9 14:48 ..\r\n\
@@ -41,15 +32,13 @@ module.exports = {
  -rw-r--r--   1 mrclash  pg223090        4 Aug  4 09:11 testfile.txt\r\n\
 211 End of status";
 
-
-
         var unixEntries = [
             {
                 //line: "-rw-r--r--   1 mrclash  pg223090      260 Mar 25  2008 .alias",
                 type: 0,
                 size: 260,
                 name: ".alias",
-                time: 1206399600000,
+                time: +new Date("Mar 25  2008"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -70,7 +59,7 @@ module.exports = {
                 type: 0,
                 size: 2219,
                 name: ".bash_history",
-                time: 1283637600000,
+                time: +new Date("Sep  5  2010"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -90,7 +79,7 @@ module.exports = {
                 type: 0,
                 size: 55,
                 name: ".bashrc",
-                time: 1206399600000,
+                time: +new Date("Mar 25  2008"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -110,7 +99,7 @@ module.exports = {
                 type: 1,
                 size: 4096,
                 name: ".ssh",
-                time: 997360740000,
+                time: +new Date("Aug  9 14:39 " + new Date().getFullYear()),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -130,7 +119,7 @@ module.exports = {
                 type: 0,
                 size: 18,
                 name: "Cloud9 FTP connection test.",
-                time: 997268760000,
+                time: +new Date("Aug  8 13:06 " + new Date().getFullYear()),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -150,7 +139,7 @@ module.exports = {
                 type: 0,
                 size: 68491314,
                 name: "Documents.zip",
-                time: 1232578800000,
+                time: +new Date("Jan 22  2009"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -170,7 +159,7 @@ module.exports = {
                 type: 0,
                 size: 141,
                 name: "EcPxMptYISIdOSjS.XFV.Q--.html",
-                time: 1225494000000,
+                time: +new Date("Nov  1  2008"),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -190,7 +179,7 @@ module.exports = {
                 type: 1,
                 size: 4096,
                 name: "logs",
-                time: 991115220000,
+                time: +new Date("May 29 07:47 " + new Date().getFullYear()),
                 owner: "mrclash",
                 group: "dhapache",
 
@@ -210,7 +199,7 @@ module.exports = {
                 type: 1,
                 size: 4096,
                 name: "re-alpine.git",
-                time: 997361280000,
+                time: +new Date("Aug  9 14:48 " + new Date().getFullYear()),
                 owner: "mrclash",
                 group: "pg223090",
 
@@ -229,7 +218,7 @@ module.exports = {
             {
                 type: 0,
                 size: 312115,
-                time: 1232578800000,
+                time: +new Date("Jan 22  2009"),
                 name: "restaurants.csv",
                 owner: "mrclash",
                 group: "pg223090",
@@ -249,7 +238,7 @@ module.exports = {
             {
                 type: 1,
                 size: 4096,
-                time: 995935320000,
+                time: +new Date("Jul 24 02:42 " + new Date().getFullYear()),
                 name: "sergimansilla.com",
                 owner: "mrclash",
                 group: "pg223090",
@@ -269,7 +258,7 @@ module.exports = {
             {
                 type: 1,
                 size: 4096,
-                time: 1249250400000,
+                time: +new Date("Aug  3  2009"),
                 name: "svn",
                 owner: "mrclash",
                 group: "pg223090",
@@ -289,7 +278,7 @@ module.exports = {
             {
                 type: 0,
                 size: 76,
-                time: 997361220000,
+                time: +new Date("Aug  9 14:47 " + new Date().getFullYear()),
                 name: "sync-alpine.sh",
                 owner: "mrclash",
                 group: "pg223090",
@@ -309,7 +298,7 @@ module.exports = {
             {
                 type: 1,
                 size: 4096,
-                time: 996912000000,
+                time: +new Date("Aug  4 10:00 " + new Date().getFullYear()),
                 name: "test_c9",
                 owner: "mrclash",
                 group: "pg223090",
@@ -329,7 +318,7 @@ module.exports = {
             {
                 type: 0,
                 size: 4,
-                time: 996909060000,
+                time: +new Date("Aug  4 09:11 " + new Date().getFullYear()),
                 name: "testfile.txt",
                 owner: "mrclash",
                 group: "pg223090",
@@ -352,7 +341,7 @@ module.exports = {
 211-drwxr-x---   2 userName alternc      4096 Aug 22 03:45 .\r\n\
 211-drwxr-x---   5 userName alternc      4096 Aug 22 03:45 ..\r\n\
 211--rw-r-----   1 userName alternc       460 Aug 22 03:45 test1\r\n\
-211--rw-r-----   1 userName alternc       560 Aug 22 03:45 test2\r\n\
+211--rw-r-----   1 userName alternc       560 Aug 22 03:47 test2\r\n\
 211 End of status";
 
          var unixEntries2 = [
@@ -361,7 +350,7 @@ module.exports = {
                 type: 0,
                 size: 460,
                 name: "test1",
-                time: 998444700000,
+                time: +new Date("Aug 22 03:45 " + new Date().getFullYear()),
                 owner: "userName",
                 group: "alternc",
 
@@ -382,7 +371,7 @@ module.exports = {
                 type: 0,
                 size: 560,
                 name: "test2",
-                time: 998444700000,
+                time: +new Date("Aug 22 03:47 " + new Date().getFullYear()),
                 owner: "userName",
                 group: "alternc",
 
@@ -455,30 +444,29 @@ module.exports = {
                 assert.equal(unixEntries2[i].otherWritePerm, entry.otherPermissions.write);
                 assert.equal(unixEntries2[i].otherExecPerm,  entry.otherPermissions.exec);
             });
+    });
 
-        next();
-    },
-    "test ftp windows/DOS LIST responses" : function(next) {
+    it("test ftp windows/DOS LIST responses" , function() {
         var dosEntries = [
             {
                 line: '04-27-00  09:09PM       <DIR>          licensed',
                 type: 1,
                 size: 0,
-                time: 956862540000,
+                time: +(new Date("04-27-00  09:09 PM")),
                 name: 'licensed',
             },
             {
                 line: '11-18-03  10:16AM       <DIR>          pub',
                 type: 1,
                 size: 0,
-                time: 1069146960000,
+                time: +(new Date("11-18-03  10:16 AM")),
                 name: 'pub',
             },
             {
                 line: '04-14-99  03:47PM                  589 readme.htm',
                 type: 0,
                 size: 589,
-                time: 924097620000,
+                time: +(new Date("04-14-99  03:47 PM")),
                 name: 'readme.htm'
             }
         ];
@@ -490,17 +478,15 @@ module.exports = {
             assert.equal(result.size, entry.size);
             assert.equal(result.name, entry.name);
             assert.equal(result.time, entry.time);
-
-            next();
         });
-    }
+    });
 
-/*
- * We are not supporting MLSx commands yet
- *
- * http://rfc-ref.org/RFC-TEXTS/3659/chapter7.html
- * http://www.rhinosoft.com/newsletter/NewsL2005-07-06.asp?prod=rs
- *
+    /*
+     * We are not supporting MLSx commands yet
+     *
+     * http://rfc-ref.org/RFC-TEXTS/3659/chapter7.html
+     * http://www.rhinosoft.com/newsletter/NewsL2005-07-06.asp?prod=rs
+     *
     "test parse MLSD command lines" : function(next) {
         var lines = [
             {
@@ -548,8 +534,6 @@ module.exports = {
         assert.equal("Choices.mp3", parsed.name);
         next();
     }
-*/
-}
-
-!module.parent && require("asyncjs").test.testcase(module.exports, "FTP Parser").exec();
+    */
+})
 

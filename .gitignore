@@ -1,5 +1,9 @@
+*.c9save
 *.swp
 *~
 *.bak
-node_modules/
-testfile*.txt
+*.pyc
+*.un~
+node_modules
+coverage.html
+lib-cov
