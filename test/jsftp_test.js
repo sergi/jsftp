@@ -367,12 +367,11 @@ describe("jsftp test suite", function() {
 
     it("test attach event handlers: connect", function(_next) {
         var clientOnConnect = function() {
-            client.auth(FTPCredentials.user, FTPCredentials.pass, next);
-        };
-
-        var next = function(err) {
-            assert.ok(!err);
-            client.destroy();
+            client.auth(FTPCredentials.user, FTPCredentials.pass, function(err) {
+                assert.ok(!err);
+                client.destroy();
+                _next();
+            });
         };
 
         FTPCredentials.onConnect = clientOnConnect;
