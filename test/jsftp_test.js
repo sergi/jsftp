@@ -373,6 +373,7 @@ describe("jsftp test suite", function() {
         var next = function(err) {
             assert.ok(!err);
             client.destroy();
+            _next();
         };
 
         FTPCredentials.onConnect = clientOnConnect;
