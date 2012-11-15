@@ -44,7 +44,6 @@ describe("jsftp test suite", function() {
             }
         }
 
-        var self = this;
         setTimeout(function() {
             ftp = new Ftp(FTPCredentials);
             next();
@@ -55,10 +54,11 @@ describe("jsftp test suite", function() {
         if (daemon)
             daemon.kill();
 
-        var self = this;
         setTimeout(function() {
-            ftp.destroy();
-            ftp = null;
+            if (ftp) {
+                ftp.destroy();
+                ftp = null;
+            }
             next();
         }, 200);
     }),
@@ -149,8 +149,6 @@ describe("jsftp test suite", function() {
     });
 
     it("test create and delete a directory", function(next) {
-        var self = this;
-
         var newDir = remoteCWD + "/ftp_test_dir";
         ftp.raw.mkd(newDir, function(err, res) {
             assert.ok(!err);
@@ -164,7 +162,6 @@ describe("jsftp test suite", function() {
     });
 
     it("test create and delete a directory containing a space", function(next) {
-        var self = this;
         var newDir = remoteCWD + "/ftp test dür";
         ftp.raw.mkd(newDir, function(err, res) {
             assert.ok(!err);
@@ -178,7 +175,6 @@ describe("jsftp test suite", function() {
     });
 
     it("test create and delete a file", function(next) {
-        var self = this;
         var filePath = remoteCWD + "/file_ftp_test.txt";
         Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
             var buffer = new Buffer(data, "binary");
@@ -200,7 +196,6 @@ describe("jsftp test suite", function() {
     });
 
     it("test rename a file", function(next) {
-        var self = this;
         var from = remoteCWD + "/file_ftp_test.txt";
         var to = remoteCWD + "/file_ftp_test_renamed.txt";
         Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
@@ -266,14 +261,13 @@ describe("jsftp test suite", function() {
             next();
         });
 
-        function handler() { counter++; };
+        function handler() { counter++; }
     });
 
     it("test get fileList array", function(next) {
         var file1 = "testfile.txt";
 
         ftp.raw.pwd(function(err, res) {
-            var parent, pathDir, path;
             var path = remoteCWD + "/" + file1;
 
             ftp.put(path, new Buffer("test"), function(err, res) {
@@ -359,7 +353,6 @@ describe("jsftp test suite", function() {
             ftp.socket.end();
             ftp.raw.quit(function(err, res) {
                 if (err) throw err;
-
                 next();
             });
         });
@@ -376,9 +369,63 @@ describe("jsftp test suite", function() {
             _next();
         };
 
-        FTPCredentials.onConnect = clientOnConnect;
+        var client = new Ftp({
+            host: "localhost",
+            user: "user",
+            port: 3334,
+            pass: "12345",
+            onConnect: clientOnConnect
+        });
+    });
 
-        var client = new Ftp(FTPCredentials);
+    it("test PASV streaming: Copy file using piping", function(next) {
+        var filePath = Path.join(remoteCWD, "testfile.txt");
+
+        ftp.get(filePath, function(err, originalData) {
+            assert.ok(!err, err);
+
+            ftp.getGetSocket(filePath, function(err, readable) {
+                assert(!err);
+                assert.ok(readable);
+
+                if (readable.pause)
+                    readable.pause();
+
+                readable.on("error", error);
+
+                function error(err) {
+                    assert.ok(!err);
+
+                    if (readable.destroy)
+                        readable.destroy();
+
+                    next();
+                }
+
+                var remoteCopy = filePath + ".bak";
+                ftp.getPutSocket(remoteCopy, function(err, writer) {
+                    assert.ok(!err);
+                    readable.pipe(writer);
+                    if (readable.resume)
+                        readable.resume();
+
+                    var finish = function() {
+                        ftp.get(remoteCopy, function(err, data) {
+                            assert.ok(!err, err);
+                            assert.equal(originalData.length, data.length);
+
+                            ftp.raw.dele(remoteCopy, function(err, data) {
+                                assert.ok(!err);
+                                next();
+                            });
+                        });
+                    };
+
+                    readable.on("close", finish);
+                    readable.on("end", finish);
+                    readable.on("error", error);
+                });
+            });
+        });
     });
 });
-
