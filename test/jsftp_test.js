@@ -4,6 +4,7 @@
  * @author Sergi Mansilla <sergi.mansilla@gmail.com>
  * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
  */
+ /*global it describe beforeEach afterEach */
 
 "use strict";
 
@@ -12,7 +13,6 @@ var Fs = require("fs");
 var exec = require('child_process').spawn;
 var Ftp = require("../");
 var Path = require("path");
-var util = require('util');
 
 // Write down your system credentials. This test suite will use OSX internal
 // FTP server. If you want to test against a remote server, simply change the
@@ -426,7 +426,7 @@ describe("jsftp test suite", function() {
         var originalData = Fs.readFileSync(path);
         ftp.getGetSocket(Path.join(remoteCWD, "testfile.txt"), function(err, readable) {
             assert.ok(!err);
-            concatStream(err, readable, function(err, buffer) {
+            Ftp._concatStream(err, readable, function(err, buffer) {
                 assert.ok(!err);
                 assert.equal(buffer.toString(), originalData.toString());
                 next();
@@ -451,7 +451,7 @@ describe("jsftp test suite", function() {
             assert.ok(!err);
             originalData.pipe(socket);
             originalData.resume();
-            concatStream(err, originalData, function(err, buffer) {
+            Ftp._concatStream(err, originalData, function(err, buffer) {
                 assert.ok(!err);
                 Fs.readFile(path, "utf8", function(err, original) {
                     assert.equal(buffer.toString("utf8"), original);
@@ -468,38 +468,3 @@ describe("jsftp test suite", function() {
         });
     });
 });
-
-function concatStream(err, socket, callback) {
-    if (err) return callback(err);
-
-    var pieces = [];
-    socket.on("data", function(p) { pieces.push(p); });
-    socket.on("close", function(hadError) {
-        if (hadError)
-            return callback(new Error("Socket connection error"));
-
-        callback(null, concat(pieces));
-    });
-    socket.resume();
-}
-
-function concat(bufs) {
-    var buffer, length = 0, index = 0;
-
-    if (!Array.isArray(bufs))
-        bufs = Array.prototype.slice.call(arguments);
-
-    for (var i=0, l=bufs.length; i<l; i++) {
-        buffer = bufs[i];
-        length += buffer.length;
-    }
-
-    buffer = new Buffer(length);
-
-    bufs.forEach(function(buf, i) {
-        buf.copy(buffer, index, 0, buf.length);
-        index += buf.length;
-    });
-
-    return buffer;
-}
