@@ -385,9 +385,6 @@ describe("jsftp test suite", function() {
             assert(!err, err);
             assert.ok(readable);
 
-            if (readable.pause)
-                readable.pause();
-
             readable.on("error", error);
 
             function error(err) {
@@ -404,10 +401,11 @@ describe("jsftp test suite", function() {
                 assert.ok(!err);
                 readable.pipe(socket);
 
-                if (readable.resume)
-                    readable.resume();
+                readable.on("close", finish);
+                readable.on("error", error);
+                readable.resume();
 
-                var finish = function(hadError) {
+                function finish(hadError) {
                     assert.ok(!hadError);
                     ftp.get(remoteCopy, function(err, data) {
                         assert.ok(!err, err);
@@ -418,10 +416,7 @@ describe("jsftp test suite", function() {
                             next();
                         });
                     });
-                };
-
-                readable.on("close", finish);
-                readable.on("error", error);
+                }
             });
         });
     });
@@ -485,6 +480,7 @@ function concatStream(err, socket, callback) {
 
         callback(null, concat(pieces));
     });
+    socket.resume();
 }
 
 function concat(bufs) {
