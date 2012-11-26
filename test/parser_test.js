@@ -8,7 +8,8 @@
 "use strict";
 
 var assert = require("assert");
-var Parser = require('../lib/ftpParser');
+var libpath = process.env['VFS_FTP_COV'] ? '../lib-cov' : '../lib';
+var Parser = require(libpath + '/ftpParser');
 
 describe("jsftp file listing parser", function() {
     it("test ftp unix LIST responses", function() {
@@ -30,6 +31,7 @@ describe("jsftp file listing parser", function() {
  -rwxr-xr-x   1 mrclash  pg223090       76 Aug  9 14:47 sync-alpine.sh\r\n\
  drwxr-xr-x   2 mrclash  pg223090     4096 Aug  4 10:00 test_c9\r\n\
  -rw-r--r--   1 mrclash  pg223090        4 Aug  4 09:11 testfile.txt\r\n\
+ lrwxr-xr-x    1 sergi  staff      11 Jul  7  2011 .vimrc -> .vim/.vimrc\r\n\
 211 End of status";
 
         var unixEntries = [
@@ -334,6 +336,27 @@ describe("jsftp file listing parser", function() {
                 otherReadPerm  : true,
                 otherWritePerm : false,
                 otherExecPerm  : false
+            },
+            {
+                type: 2,
+                size: 11,
+                time: +new Date("Jul  7  2011"),
+                name: ".vimrc",
+                target: ".vim/.vimrc",
+                owner: "sergi",
+                group: "staff",
+
+                userReadPerm  : true,
+                userWritePerm : true,
+                userExecPerm  : true,
+
+                groupReadPerm  : true,
+                groupWritePerm : false,
+                groupExecPerm  : true,
+
+                otherReadPerm  : true,
+                otherWritePerm : false,
+                otherExecPerm  : true
             }
         ];
 
@@ -387,7 +410,7 @@ describe("jsftp file listing parser", function() {
                 otherWritePerm : false,
                 otherExecPerm  : false
             }
-        ]
+        ];
 
         str
             .split(/\r\n/)
