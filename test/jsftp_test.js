@@ -54,6 +54,7 @@ describe("jsftp test suite", function() {
     afterEach(function(next) {
         if (daemon)
             daemon.kill();
+
         setTimeout(function() {
             if (ftp) {
                 ftp.destroy();
@@ -466,5 +467,51 @@ describe("jsftp test suite", function() {
             assert.ok(err);
             next();
         });
+    });
+
+    it("Test that onConnect is called", function(next) {
+        var FTPCredentials = {
+            host: "localhost",
+            user: "user",
+            port: 3334,
+            pass: "12345",
+            onConnect: function(socket) {
+                assert(ftp2.connected);
+                assert(socket);
+                next();
+            },
+        };
+
+        var ftp2 = new Ftp(FTPCredentials);
+    });
+
+    it("Test that onDisconnect is called", function(next) {
+        var FTPCredentials = {
+            host: "localhost",
+            user: "user",
+            port: 3334,
+            pass: "12345",
+            onDisconnect: function() {
+                next();
+            },
+        };
+
+        var ftp2 = new Ftp(FTPCredentials);
+        ftp2.raw.quit();
+    });
+
+    it("Test that onError is called", function(next) {
+        var FTPCredentials = { // Bad credentials
+            host: "localhost",
+            user: "user_",
+            port: 33342,
+            pass: "12345_",
+            onError: function(error) {
+                assert(error);
+                next();
+            },
+        };
+
+        var ftp2 = new Ftp(FTPCredentials);
     });
 });
