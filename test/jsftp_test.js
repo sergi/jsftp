@@ -313,7 +313,7 @@ describe("jsftp test suite", function() {
 
                 socket.end();
             });
-        }, function(res) {
+        }, function(err, res) {
             assert.equal(res.code, 226);
 
             ftp.raw.dele(remotePath, function(err, data) {
@@ -330,7 +330,7 @@ describe("jsftp test suite", function() {
             assert.ok(err, err);
             assert.equal(err.code, 550);
             next();
-        }, function(res) {
+        }, function(err, res) {
             assert.ok(false);
         });
     });
