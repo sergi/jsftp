@@ -265,6 +265,76 @@ describe("jsftp test suite", function() {
         function handler() { counter++; }
     });
 
+    it("test get a big file stream", function(next) {
+        var remotePath = remoteCWD + "/bigfile.test";
+
+        var data = (new Array(1*1024*1024)).join("x");
+
+        var buffer = new Buffer(data, "binary");
+
+        ftp.put(remotePath, buffer, function(err, res) {
+            assert.ok(!err, err);
+
+            ftp.getGetSocket(remotePath, function(err, socket) {
+              assert.ok(!err, err);
+
+              socket.resume();
+
+              var counter = 0;
+
+              socket.on('data', function(data) {
+                counter += data.length;
+              });
+
+              socket.on('close', function() {
+                assert.equal(buffer.length, counter);
+
+                ftp.raw.dele(remotePath, function(err, data) {
+                    assert.ok(!err);
+                    next();
+                });
+              });
+            });
+        });
+    });
+
+    it("test put a big file stream", function(next) {
+        var remotePath = remoteCWD + "/bigfile.test";
+
+        var data = (new Array(1*1024*1024)).join("x");
+
+        var buffer = new Buffer(data, "binary");
+
+        ftp.getPutSocket(remotePath, function(err, socket) {
+            assert.ok(!err, err);
+
+            socket.write(data, function(err) {
+                assert.ok(!err, err);
+
+                socket.end();
+            });
+        }, function(err, res) {
+            assert.equal(res.code, 226);
+
+            ftp.raw.dele(remotePath, function(err, data) {
+                assert.ok(!err);
+                next();
+            });
+        });
+    });
+
+    it("test put a big file stream fail", function(next) {
+        var remotePath = remoteCWD + "/nonexisting/path/to/file.txt";
+
+        ftp.getPutSocket(remotePath, function(err, socket, res) {
+            assert.ok(err, err);
+            assert.equal(err.code, 550);
+            next();
+        }, function(err, res) {
+            assert.ok(false);
+        });
+    });
+
     it("test get fileList array", function(next) {
         var file1 = "testfile.txt";
 
