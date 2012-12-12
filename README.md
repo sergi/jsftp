@@ -1,7 +1,7 @@
 jsftp [![Build Status](https://secure.travis-ci.org/sergi/jsftp.png)](http://travis-ci.org/sergi/jsftp)
 =====
 
-jsftp is a client FTP library for NodeJS that focuses on correctness, clarity and conciseness. It doesn't get in the middle of the user intentions.
+jsftp is a client FTP library for NodeJS that focuses on correctness, clarity and conciseness. It doesn't get in the middle of the user intentions, and plays nice with streaming APIs.
 
 jsftp gives the user access to all the raw commands of FTP in form of methods in the `Ftp` object. It also provides several convenience methods for actions that require complex chains of commands (e.g. uploading and retrieving files). When commands succeed they always pass the response of the server to the callback, in the form of an object that contains two properties: `code`, which is the response code of the FTP operation, and `text`, which is the complete text of the response.
 
@@ -11,8 +11,7 @@ Thus, a command like `QUIT` will be called like
 
 ```javascript
 Ftp.raw.quit(function(err, data) {
-    if (err)
-        return console.error(err);
+    if (err) return console.error(err);
 
     console.log("Bye!");
 });
@@ -22,15 +21,15 @@ and a command like `MKD`, which accepts parameters, will look like
 
 ```javascript
 Ftp.raw.mkd("/new_dir", function(err, data) {
-    if (err)
-        return console.error(err);
+    if (err) return console.error(err);
 
     console.log(data.text); // Presenting the FTP response text to the user
+    console.log(data.code); // Presenting the FTP response code to the user
 });
 ```
 
 
-Usage examples
+Common usage examples
 --------------
 
 ```javascript
@@ -49,7 +48,8 @@ var ftp = new Ftp({
 // contents of the file.
 
 // `ftp.get` is a convenience method. In this case, it hides the actual
-// complexity of setting up passive mode and retrieving files.
+// complexity of setting up passive mode and retrieving files. Keep in mind that
+// this will buffer the contents of the file in memory before transmitting them. For a streaming, non-buffering solution please use `getGetSocket`.
 ftp.get("/folder/file.ext", function(err, data) {
     if (err)
         return console.error(err);
@@ -70,18 +70,52 @@ ftp.get("/folder/file.ext", function(err, data) {
 
 // Create a directory
 ftp.raw.mkd("/example_dir", function(err, data) {
-    if (err)
-        return console.error(err);
+    if (err) return console.error(err);
 
     console.log(data.text);
 });
 
 // Delete a directory
 ftp.raw.rmd("/example_dir", function(err, data) {
-    if (err)
-        return console.error(err);
+    if (err) return console.error(err);
 
     console.log(data.text);
+});
+
+// Listing a directory
+ftp.ls("/example_dir", function(err, files){
+    if (err) return console.error(err);
+    console.log(files); // Contains an array of file objects
+});
+
+// Retrieving a file using streams
+ftp.getGetSocket("/test_dir/testfile.txt"), function(err, readable) {
+    if (err) return console.error(err);
+
+    var pieces = [];
+    // `readable` is a stream, so we can attach events to it now
+    readable.on("data", function(p) { pieces.push(p); });
+    readable.on("close", function(err) {
+        if (err) return console.error(new Error("readable connection error"));
+
+        // `Ftp._concat` is an internal method used to concatenate buffers, it
+        // is used here only for illustration purposes.
+        console.log(Ftp._concat(pieces)); // print the contents of the file
+    });
+
+    // The readable stream is already paused, we have to resume it so it can
+    // start streaming.
+    readable.resume();
+});
+
+// Storing a file in the FTP server, using streams
+var originalData = Fs.createReadStream("sourceFile.txt"));
+originalData.pause();
+
+ftp.getPutSocket("/remote_folder/sourceFileCopy.txt"), function(err, socket) {
+    if (err) return console.error(err);
+    originalData.pipe(socket); // Transfer from source to the remote file
+    originalData.resume();
 });
 ```
 
@@ -170,6 +204,12 @@ To run the tests:
 
 Please note that for now the unit tests require python because the FTP server
 used is written in python.
+
+Changelog
+---------
+
+**0.5.5**
+- Solved issues and hangs when uploading big files
 
 
 License
