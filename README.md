@@ -208,6 +208,10 @@ used is written in python.
 Changelog
 ---------
 
+**0.5.6**
+- Fixed bug in which passive requests would ignore the host if it was not the
+  same as the original host.
+
 **0.5.5**
 - Solved issues and hangs when uploading big files
 
