@@ -504,6 +504,132 @@ describe("jsftp file listing parser", function() {
         });
     });
 
+    it("test truncated listing" , function() {
+        var truncated = "\
+213-Status follows:\r\n\
+drwxr-xr-x   33 0        0            4096 Nov 28 01:19 .\r\n\
+drwxr-xr-x   33 0        0            4096 Nov 28 01:19 ..\r\n\
+ -rwxr-xr-x   1 mrclash  pg223090 68491314 Jan 22  2009 Documents.zip\r\n\
+drwxr-xr-x    3 0        0            4096 Apr 16  2011 bourd\n\
+arie\r\n\
+drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
+drwx------    2 0        0            4096 Apr 16  2011 lost+found\r\n\
+213 End of status"
+
+        var unixEntries = [
+                {
+                    type: 0,
+                    size: 68491314,
+                    name: "Documents.zip",
+                    time: +new Date("Jan 22  2009"),
+                    owner: "mrclash",
+                    group: "pg223090",
+
+                    userReadPerm  : true,
+                    userWritePerm : true,
+                    userExecPerm  : true,
+
+                    groupReadPerm  : true,
+                    groupWritePerm : false,
+                    groupExecPerm  : true,
+
+                    otherReadPerm  : true,
+                    otherWritePerm : false,
+                    otherExecPerm  : true
+                },
+                {
+                    type: 1,
+                    size: 4096,
+                    name: "bourdarie",
+                    time: +new Date("Apr 16  2011"),
+                    owner: "0",
+                    group: "0",
+
+                    userReadPerm  : true,
+                    userWritePerm : true,
+                    userExecPerm  : true,
+
+                    groupReadPerm  : true,
+                    groupWritePerm : false,
+                    groupExecPerm  : true,
+
+                    otherReadPerm  : true,
+                    otherWritePerm : false,
+                    otherExecPerm  : true
+                },
+                {
+                    type: 1,
+                    size: 4096,
+                    name: "denton",
+                    time: +new Date("Apr 16  2011"),
+                    owner: "0",
+                    group: "0",
+
+                    userReadPerm  : true,
+                    userWritePerm : true,
+                    userExecPerm  : true,
+
+                    groupReadPerm  : true,
+                    groupWritePerm : false,
+                    groupExecPerm  : true,
+
+                    otherReadPerm  : true,
+                    otherWritePerm : false,
+                    otherExecPerm  : true
+                },
+                {
+                    type: 1,
+                    size: 4096,
+                    name: "lost+found",
+                    time: +new Date("Apr 16  2011"),
+                    owner: "0",
+                    group: "0",
+
+                    userReadPerm  : true,
+                    userWritePerm : true,
+                    userExecPerm  : true,
+
+                    groupReadPerm  : false,
+                    groupWritePerm : false,
+                    groupExecPerm  : false,
+
+                    otherReadPerm  : false,
+                    otherWritePerm : false,
+                    otherExecPerm  : false
+                }
+        ];
+
+        truncated
+            .split(/\r\n/)
+            .map(function(entry) {
+                return Parser.entryParser(entry.replace("\n", ""));
+            })
+            // Flatten the array
+            .filter(function(value){ return !!value; })
+            .forEach(function(entry, i) {
+                console.log(entry.name)
+                assert.equal(unixEntries[i].type, entry.type);
+                assert.equal(unixEntries[i].size, entry.size);
+                assert.equal(unixEntries[i].name, entry.name);
+                assert.equal(unixEntries[i].time, entry.time);
+                assert.equal(unixEntries[i].owner, entry.owner);
+                assert.equal(unixEntries[i].group, entry.group);
+
+                assert.equal(unixEntries[i].userReadPerm,   entry.userPermissions.read);
+                assert.equal(unixEntries[i].userWritePerm,  entry.userPermissions.write);
+                assert.equal(unixEntries[i].userExecPerm,   entry.userPermissions.exec);
+
+                assert.equal(unixEntries[i].groupReadPerm,  entry.groupPermissions.read);
+                assert.equal(unixEntries[i].groupWritePerm, entry.groupPermissions.write);
+                assert.equal(unixEntries[i].groupExecPerm,  entry.groupPermissions.exec);
+
+                assert.equal(unixEntries[i].otherReadPerm,  entry.otherPermissions.read);
+                assert.equal(unixEntries[i].otherWritePerm, entry.otherPermissions.write);
+                assert.equal(unixEntries[i].otherExecPerm,  entry.otherPermissions.exec);
+            });
+    });
+
+
     /*
      * We are not supporting MLSx commands yet
      *
