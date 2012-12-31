@@ -607,7 +607,6 @@ drwx------    2 0        0            4096 Apr 16  2011 lost+found\r\n\
             // Flatten the array
             .filter(function(value){ return !!value; })
             .forEach(function(entry, i) {
-                console.log(entry.name)
                 assert.equal(unixEntries[i].type, entry.type);
                 assert.equal(unixEntries[i].size, entry.size);
                 assert.equal(unixEntries[i].name, entry.name);
