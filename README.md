@@ -208,6 +208,9 @@ used is written in python.
 Changelog
 ---------
 
+**0.5.7**
+- Fixed bug when parsing truncated file listings
+
 **0.5.6**
 - Fixed bug in which passive requests would ignore the host if it was not the
   same as the original host.
