@@ -208,6 +208,9 @@ used is written in python.
 Changelog
 ---------
 
+**0.5.8**
+- Fixed bad filename parsing on some cases
+
 **0.5.7**
 - Fixed bug when parsing truncated file listings
 
