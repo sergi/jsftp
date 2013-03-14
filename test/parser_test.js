@@ -12,6 +12,148 @@ var libpath = process.env['VFS_FTP_COV'] ? '../lib-cov' : '../lib';
 var Parser = require(libpath + '/ftpParser');
 
 describe("jsftp file listing parser", function() {
+    it("test ftp unix STAT responses", function() {
+        var str = "213-Status follows:\r\n\
+drwxr-xr-x    5 1001     1001         4096 Jan 09 11:52 .\r\n\
+drwxr-xr-x    4 0        0            4096 Sep 19 13:50 ..\r\n\
+-rw-------    1 1001     1001         1118 Jan 09 12:09 .bash_history\r\n\
+-rw-------    1 1001     1001          943 Jan 09 11:52 .viminfo\r\n\
+drwxrwxr-x    5 1001     1001         4096 Jan 09 11:52 inaccessible\r\n\
+drwxrwxrwx    2 1001     1001         4096 Sep 21 11:20 project1\r\n\
+drwx------    2 1001     1001         4096 Oct 19 16:17 project2\r\n\
+213 End of status";
+
+        var unixEntries = [
+            {
+                type: 0,
+                size: 1118,
+                name: ".bash_history",
+                time: +new Date("Jan  9 12:09 " + new Date().getFullYear()),
+                owner: "1001",
+                group: "1001",
+
+                userReadPerm  : true,
+                userWritePerm : true,
+                userExecPerm  : false,
+
+                groupReadPerm  : false,
+                groupWritePerm : false,
+                groupExecPerm  : false,
+
+                otherReadPerm  : false,
+                otherWritePerm : false,
+                otherExecPerm  : false
+            },
+            {
+                type: 0,
+                size: 943,
+                name: ".viminfo",
+                time: +new Date("Jan  9 11:52 " + new Date().getFullYear()),
+                owner: "1001",
+                group: "1001",
+
+                userReadPerm  : true,
+                userWritePerm : true,
+                userExecPerm  : false,
+
+                groupReadPerm  : false,
+                groupWritePerm : false,
+                groupExecPerm  : false,
+
+                otherReadPerm  : false,
+                otherWritePerm : false,
+                otherExecPerm  : false
+            },
+            {
+                type: 1,
+                size: 4096,
+                name: "inaccessible",
+                time: +new Date("Jan  9 11:52 " + new Date().getFullYear()),
+                owner: "1001",
+                group: "1001",
+
+                userReadPerm  : true,
+                userWritePerm : true,
+                userExecPerm  : true,
+
+                groupReadPerm  : true,
+                groupWritePerm : true,
+                groupExecPerm  : true,
+
+                otherReadPerm  : true,
+                otherWritePerm : false,
+                otherExecPerm  : true
+            },
+            {
+                type: 1,
+                size: 4096,
+                name: "project1",
+                time: +new Date("Sep 21 11:20 " + new Date().getFullYear()),
+                owner: "1001",
+                group: "1001",
+
+                userReadPerm  : true,
+                userWritePerm : true,
+                userExecPerm  : true,
+
+                groupReadPerm  : true,
+                groupWritePerm : true,
+                groupExecPerm  : true,
+
+                otherReadPerm  : true,
+                otherWritePerm : true,
+                otherExecPerm  : true
+            },
+            {
+                type: 1,
+                size: 4096,
+                name: "project2",
+                time: +new Date("Oct 19 16:17 " + new Date().getFullYear()),
+                owner: "1001",
+                group: "1001",
+
+                userReadPerm  : true,
+                userWritePerm : true,
+                userExecPerm  : true,
+
+                groupReadPerm  : false,
+                groupWritePerm : false,
+                groupExecPerm  : false,
+
+                otherReadPerm  : false,
+                otherWritePerm : false,
+                otherExecPerm  : false
+            }];
+
+            str
+            .split(/\r\n/)
+            .map(function(entry) {
+                return Parser.entryParser(entry.replace("\n", ""));
+            })
+            // Flatten the array
+            .filter(function(value){ return !!value; })
+            .forEach(function(entry, i) {
+                assert.equal(unixEntries[i].type, entry.type);
+                assert.equal(unixEntries[i].size, entry.size);
+                assert.equal(unixEntries[i].name, entry.name);
+                //assert.equal(unixEntries[i].time, entry.time);
+                assert.equal(unixEntries[i].owner, entry.owner);
+                assert.equal(unixEntries[i].group, entry.group);
+
+                assert.equal(unixEntries[i].userReadPerm,   entry.userPermissions.read);
+                assert.equal(unixEntries[i].userWritePerm,  entry.userPermissions.write);
+                assert.equal(unixEntries[i].userExecPerm,   entry.userPermissions.exec);
+
+                assert.equal(unixEntries[i].groupReadPerm,  entry.groupPermissions.read);
+                assert.equal(unixEntries[i].groupWritePerm, entry.groupPermissions.write);
+                assert.equal(unixEntries[i].groupExecPerm,  entry.groupPermissions.exec);
+
+                assert.equal(unixEntries[i].otherReadPerm,  entry.otherPermissions.read);
+                assert.equal(unixEntries[i].otherWritePerm, entry.otherPermissions.write);
+                assert.equal(unixEntries[i].otherExecPerm,  entry.otherPermissions.exec);
+            });
+    });
+
     it("test ftp unix LIST responses", function() {
         var str = "211-Status of /:\r\n\
  drwx--x---  10 mrclash  adm          4096 Aug  9 14:48 .\r\n\
