@@ -4,7 +4,7 @@
  * @author Sergi Mansilla <sergi.mansilla@gmail.com>
  * @license https://github.com/sergi/jsFTP/blob/master/LICENSE MIT License
  */
- /*global it describe beforeEach afterEach */
+/*global it describe beforeEach afterEach */
 
 "use strict";
 
@@ -36,11 +36,11 @@ describe("jsftp test suite", function() {
             try {
                 daemon = exec('python', ['test/basic_ftpd.py']);
             }
-            catch(e) {
+            catch (e) {
                 console.log(
                     "There was a problem trying to start the FTP service." +
-                    " . This could be because you don't have enough permissions" +
-                    "to run the FTP service on the given port.\n\n" + e
+                        " . This could be because you don't have enough permissions" +
+                        "to run the FTP service on the given port.\n\n" + e
                 );
             }
         }
@@ -64,17 +64,17 @@ describe("jsftp test suite", function() {
         }, 200);
     }),
 
-    it("test features command", function(next) {
-        ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
-            assert.ok(Array.isArray(ftp.features));
+        it("test features command", function(next) {
+            ftp.auth(FTPCredentials.user, FTPCredentials.pass, function(err, res) {
+                assert.ok(Array.isArray(ftp.features));
 
-            if (ftp.features.length) {
-                var feat = ftp.features[0];
-                assert.ok(ftp.hasFeat(feat));
-            }
-            next();
+                if (ftp.features.length) {
+                    var feat = ftp.features[0];
+                    assert.ok(ftp.hasFeat(feat));
+                }
+                next();
+            });
         });
-    });
 
     it("test initialize", function(next) {
         assert.equal(ftp.host, FTPCredentials.host);
@@ -128,8 +128,28 @@ describe("jsftp test suite", function() {
         });
     });
 
+    it("test listing with bad line breaks", function(next) {
+        var badStr = "\
+213-Status follows:\r\n\
+-rw-r--r-- 1 0 0 105981956 Dec 20 18:07 GAT\r\n\
+SBY.MPG\r\n\
+-rw-r--r-- 1 0 0 74450948 Jan 17 18:16 GIJO.MPG\r\n\
+drwxr-xr-x    3 0        0            4096 Apr 16  2011 bourd\n\
+arie\r\n\
+drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
+213 End of status";
+
+        var entries = Ftp.parseEntry(badStr);
+        assert.equal("GATSBY.MPG", entries[0].name)
+        assert.equal("GIJO.MPG", entries[1].name)
+        assert.equal("bourdarie", entries[2].name)
+        assert.equal("denton", entries[3].name)
+
+        next();
+    });
+
     it("test passive listing of current directory", function(next) {
-        ftp.list(remoteCWD, function(err, res){
+        ftp.list(remoteCWD, function(err, res) {
             assert.ok(!err, err);
             next();
         });
@@ -268,7 +288,7 @@ describe("jsftp test suite", function() {
     it("test get a big file stream", function(next) {
         var remotePath = remoteCWD + "/bigfile.test";
 
-        var data = (new Array(1*1024*1024)).join("x");
+        var data = (new Array(1 * 1024 * 1024)).join("x");
 
         var buffer = new Buffer(data, "binary");
 
@@ -276,24 +296,24 @@ describe("jsftp test suite", function() {
             assert.ok(!err, err);
 
             ftp.getGetSocket(remotePath, function(err, socket) {
-              assert.ok(!err, err);
+                assert.ok(!err, err);
 
-              socket.resume();
+                socket.resume();
 
-              var counter = 0;
+                var counter = 0;
 
-              socket.on('data', function(data) {
-                counter += data.length;
-              });
-
-              socket.on('close', function() {
-                assert.equal(buffer.length, counter);
-
-                ftp.raw.dele(remotePath, function(err, data) {
-                    assert.ok(!err);
-                    next();
+                socket.on('data', function(data) {
+                    counter += data.length;
                 });
-              });
+
+                socket.on('close', function() {
+                    assert.equal(buffer.length, counter);
+
+                    ftp.raw.dele(remotePath, function(err, data) {
+                        assert.ok(!err);
+                        next();
+                    });
+                });
             });
         });
     });
@@ -301,7 +321,7 @@ describe("jsftp test suite", function() {
     it("test put a big file stream", function(next) {
         var remotePath = remoteCWD + "/bigfile.test";
 
-        var data = (new Array(1*1024*1024)).join("x");
+        var data = (new Array(1 * 1024 * 1024)).join("x");
 
         var buffer = new Buffer(data, "binary");
 
@@ -390,7 +410,7 @@ describe("jsftp test suite", function() {
 
             var count = 0;
             function handler(err, res) {
-            assert.ok(!err);
+                assert.ok(!err);
                 if (++count == 3)
                     next();
             }
