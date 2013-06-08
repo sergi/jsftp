@@ -1,0 +1,45 @@
+{
+  "name": "parse-listing",
+  "id": "parse-listing",
+  "version": "1.0.0",
+  "description": "Small library to parse file listings into JavaScript objects",
+  "keywords": [
+    "parse",
+    "ls",
+    "list",
+    "listing",
+    "ftp",
+    "unix",
+    "dos"
+  ],
+  "author": "Sergi Mansilla <sergi.mansilla@gmail.com> (http://sergimansilla.com)",
+  "homepage": "https://github.com/sergi/parse-listing",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sergi/parse-listing.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sergi/parse-listing/issues"
+  },
+  "dependencies": {
+    "event-stream": "~3.0.14"
+  },
+  "devDependencies": {
+    "mocha": "~1.10.0",
+    "istanbul": "~0.1.36",
+    "mocha-istanbul": "~0.2.0"
+  },
+  "main": "./parser.js",
+  "engines": {
+    "node": ">=0.6.21"
+  },
+  "scripts": {
+    "test": "mocha -R spec -t 5000"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/sergi/parse-listing/blob/master/LICENSE"
+    }
+  ]
+}
