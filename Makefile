@@ -13,11 +13,6 @@ clean:
 test:
 	$(MOCHA) -R spec $(TESTS)
 
-xunit:
-	@# check if reports folder exists, if not create it
-	@test -d reports || mkdir reports
-	XUNIT_FILE="reports/TESTS-xunit.xml" $(MOCHA) -R xunit-file $(TESTS)
-
 coverage:
 	@# check if reports folder exists, if not create it
 	@test -d reports || mkdir reports
@@ -25,15 +20,13 @@ coverage:
 	@# move original src code and replace it by the instrumented one
 	mv src src-orig && mv src-cov src
 	@# tell istanbul to only generate the lcov file
-	ISTANBUL_REPORTERS=lcov $(MOCHA) -R mocha-istanbul $(TESTS)
+	ISTANBUL_REPORTERS=lcovonly $(MOCHA) -R mocha-istanbul $(TESTS)
 	@# place the lcov report in the report folder, remove instrumented code
 	@# and reput src at its place
-	mv lcov.info reports/coverage.lcov
+	mv lcov.info reports/
 	rm -rf src
 	mv src-orig src
-
-cobertura: coverage
-	python tools/lcov_cobertura.py reports/coverage.lcov -b src -o reports/coverage.xml
+	genhtml reports/lcov.info --output-directory reports/
 
 jshint:
 	$(JSHINT) src test --show-non-errors
@@ -43,10 +36,4 @@ checkstyle:
 	@test -d reports || mkdir reports
 	$(JSHINT) src test --reporter=checkstyle > reports/checkstyle.xml
 
-sonar:
-	@# add the sonar sonar-runner executable to the PATH
-	PATH="$$PWD/tools/sonar-runner-2.2/bin:$$PATH" sonar-runner
-
-ci: clean xunit cobertura checkstyle sonar
-
-.PHONY: clean test xunit coverage cobertura jshint checkstyle sonar ci
+.PHONY: clean test coverage jshint checkstyle
