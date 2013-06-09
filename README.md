@@ -1,10 +1,10 @@
-h2. parse-listing [![Build Status](https://secure.travis-ci.org/sergi/parse-listing.png)](http://travis-ci.org/sergi/parse-listing)
+## parse-listing [![Build Status](https://secure.travis-ci.org/sergi/parse-listing.png)](http://travis-ci.org/sergi/parse-listing)
 
 Simple library that parses file listing input for different platforms. An
 example file listing is the output of the `ls` command in unix, or the `dir`
 command in DOS/Windows platforms.
 
-h2. Example
+## Example
 
 ```javascript
 var Parser = require("parse-listing");
@@ -59,15 +59,15 @@ listing. A parsed line becomes a JavaScript object like this:
   }
 ```
 
-h2. Methods
+## Methods
 
-h3. parseEntries(string|array, callback)
+### parseEntries(string|array, callback)
 
 Asynchronously parses a list of entries either in a single string (entries will
 be split by newlines) or in an array of strings. Invokes the callback when all
 the entries have been processed, and passes an array of JavaScript objects.
 
-h3. parseEntry(string)
+### parseEntry(string)
 
 Parses a single string such as:
 
@@ -75,7 +75,7 @@ Parses a single string such as:
 
 and returns the JavaScript object for it.
 
-h2. Installation
+## Installation
 
 With NPM:
 
@@ -85,7 +85,7 @@ From GitHub:
 
     git clone https://github.com/sergi/parse-listing.git
 
-h2. License
+## License
 
 The MIT License
 
