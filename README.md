@@ -73,7 +73,8 @@ Parses a single string such as:
 
 `drwxrwxrwx    2 1001     1001         4096 Sep 21 11:20 project`
 
-and returns the JavaScript object for it.
+and returns the JavaScript object for it. There is no need to specif whether the
+entry is in UNIX or MS-DOS/Windows format. The parser will find out by itself.
 
 ## Installation
 
