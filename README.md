@@ -61,7 +61,7 @@ listing. A parsed line becomes a JavaScript object like this:
 
 ## Methods
 
-### parseEntries(string|array, callback)
+### parseEntries(string | array, callback)
 
 Asynchronously parses a list of entries either in a single string (entries will
 be split by newlines) or in an array of strings. Invokes the callback when all
@@ -73,7 +73,7 @@ Parses a single string such as:
 
 `drwxrwxrwx    2 1001     1001         4096 Sep 21 11:20 project`
 
-and returns the JavaScript object for it. There is no need to specif whether the
+and returns the JavaScript object for it. There is no need to specify whether the
 entry is in UNIX or MS-DOS/Windows format. The parser will find out by itself.
 
 ## Installation
@@ -90,7 +90,7 @@ From GitHub:
 
 The MIT License
 
-Copyright(c) 2013 Sergi MAnsilla <sergi.mansilla AT gmail.com>
+Copyright(c) 2013 Sergi Mansilla <sergi.mansilla AT gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -1,7 +1,7 @@
 {
   "name": "parse-listing",
   "id": "parse-listing",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Small library to parse file listings into JavaScript objects",
   "keywords": [
     "parse",
@@ -29,7 +29,7 @@
     "istanbul": "~0.1.36",
     "mocha-istanbul": "~0.2.0"
   },
-  "main": "./parser.js",
+  "main": "src/parser.js",
   "engines": {
     "node": ">=0.6.21"
   },
