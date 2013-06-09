@@ -1,10 +1,12 @@
 /**
- * @package ls-parse
+ * @package parse-listing
  * @author Sergi Mansilla <sergi.mansilla@gmail.com>
- * @license https://github.com/sergi/ls-parse/blob/master/LICENSE MIT License
+ * @license https://github.com/sergi/parse-listing/blob/master/LICENSE MIT License
  */
 
 "use strict";
+
+var async = require("async");
 
 /**
  * this is the regular expression used by Unix Parsers.
@@ -65,8 +67,6 @@ var RE_DOSEntry = new RegExp(
 //     + "\\([a-zA-Z]*,[a-zA-Z]*,[a-zA-Z]*,[a-zA-Z]*\\)"
 // );
 
-// var MONTHS = [null, "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 exports.nodeTypes = {
   FILE_TYPE: 0,
   DIRECTORY_TYPE: 1,
@@ -90,10 +90,24 @@ exports.access = {
  * Selects which parser to use depending on the first character of the line to
  * parse.
  *
- * @param entry {String} FTP file entry line
- * @returns {Object} Parsed object with the file entry properties
+ * @param entries {Array.<string>|string} FTP file entry line.
+ * @param callback {Function} Callback function with error or result.
  */
-exports.entryParser = function(entry, cfg) {
+exports.parseEntries = function(entries, callback) {
+  if (typeof entries === "string") {
+    entries = entries.split(/(\r\n|\n)/);
+  }
+  async.map(entries, parseEntry, callback);
+};
+
+/**
+ * Selects which parser to use depending on the first character of the line to
+ * parse.
+ *
+ * @param entry {string} FTP file entry line
+ * @returns {Object|null} Parsed object with the file entry properties
+ */
+var parseEntry = exports.parseEntry = function(entry) {
   var c = entry.charAt(0);
 
   if ('bcdlps-'.indexOf(c) > -1) {
@@ -107,129 +121,129 @@ exports.entryParser = function(entry, cfg) {
   }
 };
 
-var parsers = {};
+var parsers = {
+  unix: function(entry) {
+    var target, writePerm, readPerm, execPerm;
+    var group = entry.match(RE_UnixEntry);
 
-parsers.unix = function(entry) {
-  var target, writePerm, readPerm, execPerm;
-  var group = entry.match(RE_UnixEntry);
+    if (group) {
+      var type = group[1];
+      //var hardLinks = group[15];
+      var usr = group[16];
+      var grp = group[17];
+      var size = group[18];
+      var name = group[21];
 
-  if (group) {
-    var type = group[1];
-    //var hardLinks = group[15];
-    var usr = group[16];
-    var grp = group[17];
-    var size = group[18];
-    var name = group[21];
+      var date;
+      // Check whether we are given the time (recent file) or the year
+      // (older file) in the file listing.
+      if (group[20].indexOf(":") === -1) {
+        date = +new Date(group[19] + " " + group[20]).getTime();
+      }
+      else {
+        var currentMonth = new Date().getMonth();
+        var month = new Date(group[19]).getMonth();
+        var year = new Date().getFullYear() - (currentMonth < month ? 1 : 0);
 
-    var date;
-    // Check whether we are given the time (recent file) or the year
-    // (older file) in the file listing.
-    if (group[20].indexOf(":") === -1) {
-      date = +new Date(group[19] + " " + group[20]).getTime();
+        date = +new Date(group[19] + " " + group[20] + " " + year);
+      }
+
+      // Ignoring '.' and '..' entries for now
+      if (name === "." || name === "..")
+        return;
+
+      //var endtoken = group[22];
+
+      switch (type[0]) {
+        case 'd':
+          type = exports.nodeTypes.DIRECTORY_TYPE;
+          break;
+        case 'l':
+          type = exports.nodeTypes.SYMBOLIC_LINK_TYPE;
+          var isLink = /(.*)\s->\s(.*)/.exec(name);
+          if (isLink) {
+            name = isLink[1];
+            target = isLink[2];
+          }
+          break;
+        case 'b':
+        case 'c':
+        // break; - fall through
+        case 'f':
+        case '-':
+          type = exports.nodeTypes.FILE_TYPE;
+          break;
+        default:
+          type = exports.nodeTypes.UNKNOWN_TYPE;
+      }
+
+      var file = {
+        name: name,
+        type: type,
+        time: date,
+        size: size,
+        owner: usr,
+        group: grp
+      };
+
+      if (target) file.target = target;
+
+      var g = 4;
+      ["user", "group", "other"].forEach(function(access) {
+        // Use != '-' to avoid having to check for suid and sticky bits
+        readPerm = group[g] !== "-";
+        writePerm = group[g + 1] !== "-";
+
+        var execPermStr = group[g + 2];
+
+        file[access + "Permissions"] = {
+          read: readPerm,
+          write: writePerm,
+          exec: (execPermStr !== "-") && !(/[A-Z]/.test(execPermStr[0]))
+        };
+
+        g += 4;
+      });
+
+      return file;
+    }
+  },
+
+  msdos: function(entry) {
+    var group = entry.match(RE_DOSEntry);
+    var type;
+
+    if (!group)
+      return null;
+
+    var replacer = function replacer(str, hour, min, ampm, offset, s) {
+      return hour + ":" + min + " " + ampm;
+    };
+
+    var time = group[2].replace(/(\d{2}):(\d{2})([AP]M)/, replacer);
+    var date = new Date(group[1] + " " + time).getTime();
+    var dirString = group[3];
+    var size = group[4];
+    var name = group[5];
+
+    if (null == name || name === "." || name === "..")
+      return null;
+
+    if (dirString === "<DIR>") {
+      type = exports.nodeTypes.DIRECTORY_TYPE;
+      size = 0;
     }
     else {
-      var currentMonth = new Date().getMonth();
-      var month = new Date(group[19]).getMonth();
-      var year = new Date().getFullYear() - (currentMonth < month ? 1 : 0);
-
-      date = +new Date(group[19] + " " + group[20] + " " + year);
+      type = exports.nodeTypes.FILE_TYPE;
     }
 
-    // Ignoring '.' and '..' entries for now
-    if (name === "." || name === "..")
-      return;
-
-    //var endtoken = group[22];
-
-    switch (type[0]) {
-      case 'd':
-        type = exports.nodeTypes.DIRECTORY_TYPE;
-        break;
-      case 'l':
-        type = exports.nodeTypes.SYMBOLIC_LINK_TYPE;
-        var isLink = /(.*)\s->\s(.*)/.exec(name);
-        if (isLink) {
-          name = isLink[1];
-          target = isLink[2];
-        }
-        break;
-      case 'b':
-      case 'c':
-      // break; - fall through
-      case 'f':
-      case '-':
-        type = exports.nodeTypes.FILE_TYPE;
-        break;
-      default:
-        type = exports.nodeTypes.UNKNOWN_TYPE;
-    }
-
-    var file = {
+    return {
       name: name,
       type: type,
       time: date,
-      size: size,
-      owner: usr,
-      group: grp
+      size: size
     };
-
-    if (target) file.target = target;
-
-    var g = 4;
-    ["user", "group", "other"].forEach(function(access) {
-      // Use != '-' to avoid having to check for suid and sticky bits
-      readPerm = group[g] !== "-";
-      writePerm = group[g + 1] !== "-";
-
-      var execPermStr = group[g + 2];
-
-      file[access + "Permissions"] = {
-        read: readPerm,
-        write: writePerm,
-        exec: (execPermStr !== "-") && !(/[A-Z]/.test(execPermStr[0]))
-      };
-
-      g += 4;
-    });
-
-    return file;
   }
-};
-
-parsers.msdos = function(entry) {
-  var group = entry.match(RE_DOSEntry);
-  var type;
-
-  if (!group)
-    return;
-
-  var replacer = function replacer(str, hour, min, ampm, offset, s) {
-    return hour + ":" + min + " " + ampm;
-  };
-
-  var time = group[2].replace(/(\d{2}):(\d{2})([AP]M)/, replacer);
-  var date = new Date(group[1] + " " + time).getTime();
-  var dirString = group[3];
-  var size = group[4];
-  var name = group[5];
-
-  if (null == name || name === "." || name === "..")
-    return null;
-
-  if (dirString === "<DIR>") {
-    type = exports.nodeTypes.DIRECTORY_TYPE;
-    size = 0;
-  }
-  else {
-    type = exports.nodeTypes.FILE_TYPE;
-  }
-
-  return {
-    name: name,
-    type: type,
-    time: date,
-    size: size
-  };
 };
 
 /*
@@ -238,30 +252,30 @@ parsers.msdos = function(entry) {
  * http://rfc-ref.org/RFC-TEXTS/3659/chapter7.html
  * http://www.rhinosoft.com/newsletter/NewsL2005-07-06.asp?prod=rs
  *
-var reKV = /(.+?)=(.+?);/;
-exports.parseMList = function(line) {
-    var ret;
-    var result = line.trim().split(reKV);
+ var reKV = /(.+?)=(.+?);/;
+ exports.parseMList = function(line) {
+ var ret;
+ var result = line.trim().split(reKV);
 
-    if (result && result.length > 0) {
-        ret = {};
-        if (result.length === 1) {
-            ret.name = result[0].trim();
-        }
-        else {
-            var i, k, v, len = result.length;
-            for (i = 1; i < len; i += 3) {
-                k = result[i];
-                v = result[i+1];
-                ret[k] = v;
-            }
-            ret.name = result[result.length-1].trim();
-        }
-    } else
-        ret = line;
+ if (result && result.length > 0) {
+ ret = {};
+ if (result.length === 1) {
+ ret.name = result[0].trim();
+ }
+ else {
+ var i, k, v, len = result.length;
+ for (i = 1; i < len; i += 3) {
+ k = result[i];
+ v = result[i+1];
+ ret[k] = v;
+ }
+ ret.name = result[result.length-1].trim();
+ }
+ } else
+ ret = line;
 
-    return ret;
-}
-*/
+ return ret;
+ }
+ */
 
 

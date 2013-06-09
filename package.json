@@ -22,7 +22,7 @@
     "url": "https://github.com/sergi/parse-listing/issues"
   },
   "dependencies": {
-    "event-stream": "~3.0.14"
+    "async": "~0.2.9"
   },
   "devDependencies": {
     "mocha": "~1.10.0",
