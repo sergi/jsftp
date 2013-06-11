@@ -85,17 +85,19 @@ describe("jsftp test suite", function() {
     setTimeout(function() {
       ftp = new Ftp(FTPCredentials);
       next();
-    }, 100);
+    }, 200);
   });
 
   afterEach(function(next) {
     if (daemon)
       daemon.kill();
 
-    if (ftp) {
-      ftp.destroy();
-      ftp = null;
-    }
+    setTimeout(function() {
+      if (ftp) {
+        ftp.destroy();
+        ftp = null;
+      }
+    }, 100);
     next();
   });
 
