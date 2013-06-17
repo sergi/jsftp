@@ -22,7 +22,8 @@
     "mocha": "~1.10.0",
     "istanbul": "~0.1.36",
     "mocha-istanbul": "~0.2.0",
-    "sinon": "~1.7.2"
+    "sinon": "~1.7.2",
+    "ftp-test-server": "~0.0.1"
   },
   "main": "./jsftp.js",
   "engines": {

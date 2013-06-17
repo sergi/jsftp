@@ -15,6 +15,7 @@ var Ftp = require("../");
 var Path = require("path");
 var Utils = require("../lib/utils");
 var sinon = require("sinon");
+var ftpServer = require("ftp-test-server");
 
 var concat = function(bufs) {
   var buffer, length = 0, index = 0;
@@ -67,19 +68,11 @@ var daemon;
 exec('mkdir', [__dirname + "/" + remoteCWD]);
 
 describe("jsftp test suite", function() {
-  var ftp;
+  var ftp, server;
   beforeEach(function(next) {
     if (FTPCredentials.host === "localhost") {
-      try {
-        daemon = exec('python', ['test/basic_ftpd.py']);
-      }
-      catch (e) {
-        console.log(
-          "There was a problem trying to start the FTP service." +
-            " . This could be because you don't have enough permissions" +
-            "to run the FTP service on the given port.\n\n" + e
-        );
-      }
+      server = new ftpServer();
+      server.init(FTPCredentials);
     }
 
     setTimeout(function() {
@@ -93,6 +86,7 @@ describe("jsftp test suite", function() {
       daemon.kill();
 
     setTimeout(function() {
+      server.stop();
       if (ftp) {
         ftp.destroy();
         ftp = null;

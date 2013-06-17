@@ -7,6 +7,3 @@ node_js:
 before_script:
     - "npm install --dev"
 
-install:
-  - sudo pip install pyftpdlib --use-mirrors
-  - sudo pip install PyOpenSSL --use-mirrors
