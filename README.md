@@ -1,4 +1,4 @@
-jsftp [![Build Status](https://secure.travis-ci.org/sergi/jsftp.png)](http://travis-ci.org/sergi/jsftp) <a href="http://flattr.com/thing/1452098/" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>
+jsftp <a href="http://flattr.com/thing/1452098/" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>
 =====
 
 jsftp is a client FTP library for NodeJS that focuses on correctness, clarity
@@ -57,7 +57,6 @@ Ftp.raw.mkd("/new_dir", function(err, data) {
     console.log(data.code); // Presenting the FTP response code to the user
 });
 ```
-
 
 Common usage examples
 --------------
@@ -245,15 +244,14 @@ Tests
 
 To run the tests:
 
-    pip install PyOpenSSL
-    pip install pyftpdlib
+    npm install --dev
     npm test
-
-Please note that the unit tests require python because the FTP server used is
-written in python.
 
 Changelog
 ---------
+
+**1.0.0**
+- Big refactoring and rewriting, better use of streams.
 
 **0.5.8**
 - Fixed bad filename parsing on some cases
