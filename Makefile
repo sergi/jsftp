@@ -1,6 +1,7 @@
 # use the tools as dev dependencies rather than installing them globaly
 # it lets you handle specific versions of the tooling for each of your projects
 MOCHA=node_modules/.bin/mocha
+_MOCHA="node_modules/.bin/_mocha"
 ISTANBUL=node_modules/.bin/istanbul
 JSHINT=node_modules/.bin/jshint
 
@@ -16,17 +17,7 @@ test:
 coverage:
 	@# check if reports folder exists, if not create it
 	@test -d reports || mkdir reports
-	$(ISTANBUL) instrument --output src-cov src
-	@# move original src code and replace it by the instrumented one
-	mv src src-orig && mv src-cov src
-	@# tell istanbul to only generate the lcov file
-	ISTANBUL_REPORTERS=lcovonly $(MOCHA) -R mocha-istanbul $(TESTS)
-	@# place the lcov report in the report folder, remove instrumented code
-	@# and reput src at its place
-	mv lcov.info reports/
-	rm -rf src
-	mv src-orig src
-	genhtml reports/lcov.info --output-directory reports/
+	$(ISTANBUL) cover --report lcovonly --dir ./reports $(_MOCHA) -- -R spec $(TESTS)
 
 jshint:
 	$(JSHINT) src test --show-non-errors
