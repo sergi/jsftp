@@ -15,6 +15,7 @@ var Ftp = require("../");
 var Path = require("path");
 var Utils = require("../lib/utils");
 var sinon = require("sinon");
+var EventEmitter = require("events").EventEmitter;
 var ftpServer = require("ftp-test-server");
 
 var concat = function(bufs) {
@@ -98,6 +99,11 @@ describe("jsftp test suite", function() {
   it("test initialize", function(next) {
     assert.equal(ftp.host, FTPCredentials.host);
     assert.equal(ftp.port, FTPCredentials.port);
+    assert.equal(ftp.user, FTPCredentials.user);
+
+    assert.ok(ftp instanceof EventEmitter);
+    assert.equal(ftp.pending.length, 0);
+    assert.equal(ftp.cmdBuffer_.length, 0);
 
     next();
   });
@@ -110,7 +116,7 @@ describe("jsftp test suite", function() {
 
       var feat = ftp.features[0];
       assert.ok(ftp.hasFeat(feat));
-      assert.ok(ftp.hasFeat(feat));
+      assert.equal(false, ftp.hasFeat("madeup-feat"));
       next();
     });
   });
