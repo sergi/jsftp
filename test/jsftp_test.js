@@ -79,7 +79,7 @@ describe("jsftp test suite", function() {
     setTimeout(function() {
       ftp = new Ftp(FTPCredentials);
       next();
-    }, 200);
+    }, 100);
   });
 
   afterEach(function(next) {
@@ -105,6 +105,69 @@ describe("jsftp test suite", function() {
     assert.equal(ftp.pending.length, 0);
     assert.equal(ftp.cmdBuffer_.length, 0);
 
+    next();
+  });
+
+  it("test parseResponse with mark", function(next) {
+    var cb = sinon.spy();
+    cb.expectsMark = { marks: [150] };
+    var data = {
+      code: 150,
+      text: "150 File status okay; about to open data connection."
+    };
+
+    ftp.cmdBuffer_ = [
+      ["retr fakefile.txt", cb]
+    ];
+    ftp.parse = sinon.spy();
+
+    var firstCmd = ftp.cmdBuffer_[0];
+    ftp.parseResponse(data);
+    assert(ftp.parse.calledWith(data, firstCmd));
+    next();
+  });
+
+  it("test parseResponse with no mark", function(next) {
+    var cb = sinon.spy();
+    var data = {
+      code: 150,
+      text: "150 File status okay; about to open data connection."
+    };
+
+    ftp.cmdBuffer_ = [
+      ["retr fakefile.txt", cb]
+    ];
+    ftp.parse = sinon.spy();
+
+    ftp.parseResponse(data);
+    assert.equal(ftp.parse.callCount, 0);
+    next();
+  });
+
+  it("test parseResponse with ignore code", function(next) {
+    var cb = sinon.spy();
+    cb.expectsMark = { marks: [150], ignore: 226 };
+    var data1 = {
+      code: 150,
+      text: "150 File status okay; about to open data connection."
+    };
+    var data2 = {
+      code: 226,
+      text: "226 Transfer complete."
+    };
+
+    ftp.cmdBuffer_ = [
+      ["retr fakefile.txt", cb],
+      ["list /", function() {}]
+    ];
+    ftp.parse = sinon.spy();
+    ftp.ignoreCmdCode = 150;
+
+    ftp.parseResponse(data1);
+    assert.equal(ftp.ignoreCmdCode, 226);
+    ftp.parseResponse(data2);
+    assert.equal(ftp.ignoreCmdCode, null);
+    assert(ftp.parse.calledOnce);
     next();
   });
 
@@ -311,12 +374,14 @@ drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
   it("test save a copy of a remote file", function(next) {
     var localPath = CWD + '/test_c9/testfile.txt';
     var remotePath = remoteCWD + "/testfile.txt";
+    var destination = localPath + ".copy";
 
-    var realContents = Fs.readFileSync(localPath, "binary");
-    ftp.get(remotePath, localPath + ".copy", function(err, data) {
+    Fs.unlinkSync(destination);
+    var realContents = Fs.readFileSync(localPath, "utf8");
+    ftp.get(remotePath, destination, function(err, data) {
       assert.ok(!err, err);
-      var copyContents = Fs.readFileSync(localPath + ".copy", "binary");
-      assert.equal(copyContents, realContents);
+      var copyContents = Fs.readFileSync(destination, "utf8");
+      assert.strictEqual(copyContents, realContents);
       next();
     });
   });
