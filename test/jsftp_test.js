@@ -144,6 +144,15 @@ describe("jsftp test suite", function() {
     next();
   });
 
+  it("test send function", function(next) {
+    ftp.pipeline = { write: sinon.spy() };
+    ftp.send();
+    ftp.send("list /");
+    assert.equal(ftp.pipeline.write.callCount, 1);
+    assert(ftp.pipeline.write.calledWithExactly("list /\r\n"));
+    next();
+  });
+
   it("test parseResponse with ignore code", function(next) {
     var cb = sinon.spy();
     cb.expectsMark = { marks: [150], ignore: 226 };
@@ -169,6 +178,19 @@ describe("jsftp test suite", function() {
     assert.equal(ftp.ignoreCmdCode, null);
     assert(ftp.parse.calledOnce);
     next();
+  });
+
+  it("test getFeatures", function(next) {
+    ftp.getFeatures(function(err, feats) {
+      assert.ok(Array.isArray(feats));
+      assert.ok(Array.isArray(ftp.features));
+      assert.ok(ftp.system.length > 0);
+
+      var feat = ftp.features[0];
+      assert.ok(ftp.hasFeat(feat));
+      assert.equal(false, ftp.hasFeat("madeup-feat"));
+      next();
+    });
   });
 
   it("test getFeatures", function(next) {
