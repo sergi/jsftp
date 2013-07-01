@@ -4,7 +4,7 @@ jsftp <a href="http://flattr.com/thing/1452098/" target="_blank"><img src="http:
 jsftp is a client FTP library for NodeJS that focuses on correctness, clarity
 and conciseness. It doesn't get in the way and plays nice with streaming APIs.
 
-**Warning: The latest version (1.0.0) of jsftp breaks API compatibility with previous
+**BIG Warning: The latest version (1.0.0) of jsftp breaks API compatibility with previous
 versions, it is NOT a drop-in replacement. Please be careful when upgrading. The
 API changes are not drastic at all and it is all documented below. If you do not
 want to upgrade yet you should stay with version 0.6.0, the last one before the
@@ -161,63 +161,85 @@ values are passed for those, `auth` will use anonymous credentials. `callback`
 will be called with the response text in case of successful login or with an
 error as a first parameter, in normal Node fashion.
 
+#### Ftp.ls(filePath, callback)
+Lists information about files or directories and yields an array of file objects
+with parsed file properties to the `callback`. You should use this function
+instead of `stat` or `list` in case you need to do something with the individual
+file properties.
+
+```javascript
+ftp.ls(".", function(err, res) {
+  res.forEach(function(file) {
+    console.log(file.name);
+  });
+});
+```
+
 #### Ftp.list(filePath, callback)
-Lists `filePath` contents using a passive connection.
-
-#### Ftp.get(filePath, callback)
-Convenience method that downloads `filePath` from the server using Streams. Calls
-the callback with an error or a *paused* socket that will stream the remote file
-contents. This method is exactly the same as using
-`Ftp.getGetSocket(filePath, callback);`.
-
-Example:
+Lists `filePath` contents using a passive connection. Calls callback with an
+array of strings with complete file information.
 
 ```javascript
-// Store the file in `remotePath` locally in `"/Users/sergi/file.txt"`.
-ftp.get(remotePath, function(err, socket) {
-  if (err)
-    console.error("Something went wrong.");
-
-  var writeStream = fs.createWriteStream("/Users/sergi/file.txt");
-  socket.pipe(writeStream);
-  socket.resume();
+ftp.list(remoteCWD, function(err, res) {
+  res.forEach(function(file) {
+    console.log(file.name);
+  });
+  // Prints something like
+  // -rw-r--r--   1 sergi    staff           4 Jun 03 09:32 testfile1.txt
+  // -rw-r--r--   1 sergi    staff           4 Jun 03 09:31 testfile2.txt
+  // -rw-r--r--   1 sergi    staff           0 May 29 13:05 testfile3.txt
+  // ...
 });
 ```
 
-#### Ftp.get(filePath, localPath, callback)
-Convenience method that downloads `filePath` from the server into a local file
-located at `localPath`. If the file doesn't exist it will be created. The
-`callback` function will be called with error, or nothing in case the transfer
-was successful.
-
-Example:
+#### Ftp.get(remotePath, callback)
+Gives back a paused socket with the file contents ready to be streamed,
+or calls the callback with an error if not successful.
 
 ```javascript
-// Store the file in `remotePath` locally in `"/Users/sergi/file.txt"`.
-var remotePath = "/folder/file.txt";
-var localPath = "/Users/sergi/file.txt";
-ftp.get(remotePath, localPath, function(err, data) {
-  if (err)
-    return console.error(err);
+  var str = ""; // We will store the contents of the file in this string
+  ftp.get('remote/path/file.txt', function(err, socket) {
+    if (err) return;
 
-  console.log(remotePath + " stored successfully at " + localPath);
-});
+    socket.on("data", function(d) { str += d.toString(); })
+    socket.on("close", function(hadErr) {
+      if (hadErr)
+        console.error('There was an error retrieving the file.');
+    });
+    socket.resume();
+  });
 ```
 
-#### Ftp.put(filePath, buffer, callback)
-Uploads a file to `filePath`. It accepts a `buffer` parameter that will be
-written in the remote file.
+#### Ftp.get(remotePath, localPath, callback)
+Stores the remote file directly in the given local path.
+
+```javascript
+  ftp.get('remote/file.txt, 'local/file.txt, function(hadErr) {
+    if (hadErr)
+      console.error('There was an error retrieving the file.');
+    else
+      console.log('File copied successfully!');
+  });
+```
+
+#### Ftp.put(source, remotePath, callback)
+Uploads a file to `filePath`. It accepts a string with the local path for the
+file or a `Buffer` as a `source` parameter.
+
+```javascript
+ftp.put(buffer, 'path/to/remote/file.txt', function(hadError) {
+  if (!hadError)
+    console.log("File transferred successfully!");
+});
+```
 
 #### Ftp.rename(from, to, callback)
 Renames a file in the server. `from` and `to` are both filepaths.
 
-#### Ftp.ls(filePath, callback)
-Lists information about files or directories and yields an array of file objects with parsed file properties to the callback. You should use this function instead of `stat` or `list` in case you need to do something with the individual file properties.
 
 #### Ftp.keepAlive()
 Refreshes the interval thats keep the server connection active. There is no
 need to call this method since it is taken care internally
-
 
 Installation
 ------------

@@ -316,8 +316,8 @@ drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
     var filePath = remoteCWD + "/file_ftp_test.txt";
     Fs.readFile(CWD + "/jsftp_test.js", "binary", function(err, data) {
       var buffer = new Buffer(data, "binary");
-      ftp.put(buffer, filePath, function(err, res) {
-        assert.ok(!err, err);
+      ftp.put(buffer, filePath, function(hadError) {
+        assert.ok(!hadError);
 
         ftp.ls(filePath, function(err, res) {
           assert.ok(!err);
@@ -384,6 +384,7 @@ drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
     var str = "";
     ftp.get(remotePath, function(err, socket) {
       assert.ok(!err, err);
+      assert.ok(arguments.length === 2);
       socket.on("data", function(d) { str += d; })
       socket.on("close", function(hadErr) {
         assert.equal(realContents, str);
@@ -393,15 +394,16 @@ drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
     });
   });
 
-  it("test save a copy of a remote file", function(next) {
+  it("test get a file and save it locally", function(next) {
     var localPath = CWD + '/test_c9/testfile.txt';
     var remotePath = remoteCWD + "/testfile.txt";
     var destination = localPath + ".copy";
 
     Fs.unlinkSync(destination);
     var realContents = Fs.readFileSync(localPath, "utf8");
-    ftp.get(remotePath, destination, function(err, data) {
+    ftp.get(remotePath, destination, function(err) {
       assert.ok(!err, err);
+      assert.ok(arguments.length < 2, arguments.length);
       var copyContents = Fs.readFileSync(destination, "utf8");
       assert.strictEqual(copyContents, realContents);
       next();
@@ -474,16 +476,17 @@ drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
   it("test get fileList array", function(next) {
     var file1 = "testfile.txt";
 
-    ftp.raw.cwd(remoteCWD + "/", function(err, res) {
+    ftp.raw.cwd(remoteCWD + "/", function() {
       ftp.ls(".", function(err, res) {
         assert.ok(!err, err);
         assert.ok(Array.isArray(res));
 
-        var fileNames = res.map(function(file) {
-          return file ? file.name : null;
+        res.forEach(assert.ok);
+        res = res.map(function(file) {
+          return file.name;
         });
 
-        assert.ok(fileNames.indexOf(file1) > -1);
+        assert.ok(res.indexOf(file1) > -1);
 
         next();
       });
@@ -505,121 +508,121 @@ drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
     });
   });
 
-  it("test attach event handlers: connect", function(_next) {
-    var clientOnConnect = function() {
-      client.auth(FTPCredentials.user, FTPCredentials.pass, next);
-    };
+    it("test attach event handlers: connect", function(_next) {
+      var clientOnConnect = function() {
+        client.auth(FTPCredentials.user, FTPCredentials.pass, next);
+      };
 
-    var next = function(err) {
-      assert.ok(!err);
-      client.destroy();
-      _next();
-    };
-
-    var client = new Ftp({
-      host: "localhost",
-      user: "user",
-      port: 3334,
-      pass: "12345"
-    });
-    client.on("connect", clientOnConnect);
-  });
-
-  it("test PASV streaming: Copy file using piping", function(next) {
-    var filePath = Path.join(remoteCWD, "testfile.txt");
-    var originalData = Fs.readFileSync(Path.join(CWD, "test_c9", "testfile.txt"));
-    ftp.getGetSocket(filePath, function(err, readable) {
-      assert(!err, err);
-      assert.ok(readable);
-
-      readable.on("error", error);
-
-      function error(err) {
-        assert.ok(!err, err);
-        if (readable.destroy) readable.destroy();
-        next();
-      }
-
-      var remoteCopy = filePath + ".bak";
-      ftp.getPutSocket(remoteCopy, function(err, socket) {
-          assert.ok(!err, err);
-          readable.pipe(socket);
-          readable.resume();
-        },
-
-        function(hadError) {
-          assert.ok(!hadError);
-
-          var str = "";
-          ftp.getGetSocket(remoteCopy, function(err, socket) {
-            assert.ok(!err, err);
-            socket.on("data", function(d) { str += d; });
-            socket.on("close", function(hadErr) {
-              assert.equal(originalData.toString("utf8"), str);
-              next();
-            });
-            socket.resume();
-          });
-        });
-    });
-  });
-
-  it("Test that streaming GET (RETR) retrieves a file properly", function(next) {
-    var path = Path.join(CWD, "test_c9", "testfile.txt");
-    var originalData = Fs.readFileSync(path);
-    ftp.getGetSocket(Path.join(remoteCWD, "testfile.txt"), function(err, readable) {
-      assert.ok(!err);
-      concatStream(err, readable, function(err, buffer) {
+      var next = function(err) {
         assert.ok(!err);
-        assert.equal(buffer.toString(), originalData.toString());
-        next();
+        client.destroy();
+        _next();
+      };
+
+      var client = new Ftp({
+        host: "localhost",
+        user: "user",
+        port: 3334,
+        pass: "12345"
+      });
+      client.on("connect", clientOnConnect);
+    });
+
+    it("test PASV streaming: Copy file using piping", function(next) {
+      var filePath = Path.join(remoteCWD, "testfile.txt");
+      var originalData = Fs.readFileSync(Path.join(CWD, "test_c9", "testfile.txt"));
+      ftp.getGetSocket(filePath, function(err, readable) {
+        assert(!err, err);
+        assert.ok(readable);
+
+        readable.on("error", error);
+
+        function error(err) {
+          assert.ok(!err, err);
+          if (readable.destroy) readable.destroy();
+          next();
+        }
+
+        var remoteCopy = filePath + ".bak";
+        ftp.getPutSocket(remoteCopy, function(err, socket) {
+            assert.ok(!err, err);
+            readable.pipe(socket);
+            readable.resume();
+          },
+
+          function(hadError) {
+            assert.ok(!hadError);
+
+            var str = "";
+            ftp.getGetSocket(remoteCopy, function(err, socket) {
+              assert.ok(!err, err);
+              socket.on("data", function(d) { str += d; });
+              socket.on("close", function(hadErr) {
+                assert.equal(originalData.toString("utf8"), str);
+                next();
+              });
+              socket.resume();
+            });
+          });
       });
     });
-  });
 
-  it("Test that streaming GET (RETR) fails when a file is not present", function(next) {
-    ftp.getGetSocket("unexisting/file/path", function(err, readable) {
-      assert.ok(err);
-      assert.equal(550, err.code);
-      next();
-    });
-  });
-
-  it("Test that streaming PUT (STOR) stores a file properly", function(next) {
-    var path = Path.join(CWD, "test_c9", "testfile.txt");
-    var originalData = Fs.createReadStream(Path.join(CWD, "test_c9", "testfile.txt"));
-    originalData.pause();
-
-    ftp.getPutSocket(Path.join(remoteCWD, "testfile.txt.bak"), function(err, socket) {
-      assert.ok(!err);
-      originalData.pipe(socket);
-      originalData.resume();
-      concatStream(err, originalData, function(err, buffer) {
+    it("Test that streaming GET (RETR) retrieves a file properly", function(next) {
+      var path = Path.join(CWD, "test_c9", "testfile.txt");
+      var originalData = Fs.readFileSync(path);
+      ftp.getGetSocket(Path.join(remoteCWD, "testfile.txt"), function(err, readable) {
         assert.ok(!err);
-        Fs.readFile(path, "utf8", function(err, original) {
-          assert.equal(buffer.toString("utf8"), original);
+        concatStream(err, readable, function(err, buffer) {
+          assert.ok(!err);
+          assert.equal(buffer.toString(), originalData.toString());
           next();
         });
       });
     });
-  });
 
-  it("Test that streaming PUT (STOR) fails when a file is not present", function(next) {
-    ftp.getPutSocket("unexisting/file/path", function(err, socket) {
-      assert.ok(err);
-      next();
+    it("Test that streaming GET (RETR) fails when a file is not present", function(next) {
+      ftp.getGetSocket("unexisting/file/path", function(err, readable) {
+        assert.ok(err);
+        assert.equal(550, err.code);
+        next();
+      });
+    });
+
+    it("Test that streaming PUT (STOR) stores a file properly", function(next) {
+      var path = Path.join(CWD, "test_c9", "testfile.txt");
+      var originalData = Fs.createReadStream(Path.join(CWD, "test_c9", "testfile.txt"));
+      originalData.pause();
+
+      ftp.getPutSocket(Path.join(remoteCWD, "testfile.txt.bak"), function(err, socket) {
+        assert.ok(!err);
+        originalData.pipe(socket);
+        originalData.resume();
+        concatStream(err, originalData, function(err, buffer) {
+          assert.ok(!err);
+          Fs.readFile(path, "utf8", function(err, original) {
+            assert.equal(buffer.toString("utf8"), original);
+            next();
+          });
+        });
+      });
+    });
+
+    it("Test that streaming PUT (STOR) fails when a file is not present", function(next) {
+      ftp.getPutSocket("unexisting/file/path", function(err, socket) {
+        assert.ok(err);
+        next();
+      });
+    });
+
+    it("Test that onConnect is called", function(next) {
+      var FTPCredentials = {
+        host: "localhost",
+        user: "user",
+        port: 3334,
+        pass: "12345"
+      };
+
+      var ftp2 = new Ftp(FTPCredentials);
+      ftp2.on("connect", function() { next(); });
     });
   });
-
-  it("Test that onConnect is called", function(next) {
-    var FTPCredentials = {
-      host: "localhost",
-      user: "user",
-      port: 3334,
-      pass: "12345"
-    };
-
-    var ftp2 = new Ftp(FTPCredentials);
-    ftp2.on("connect", function() { next(); });
-  });
-});
