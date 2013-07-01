@@ -4,10 +4,12 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <title>jsftp by sergi</title>
-    
+
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
@@ -21,7 +23,7 @@
         <ul>
           <li><a href="https://github.com/sergi/jsftp/zipball/master">Download <strong>ZIP File</strong></a></li>
           <li><a href="https://github.com/sergi/jsftp/tarball/master">Download <strong>TAR Ball</strong></a></li>
-          <li><a href="https://github.com/sergi/jsftp">Fork On <strong>GitHub</strong></a></li>
+          <li><a href="https://github.com/sergi/jsftp">View On <strong>GitHub</strong></a></li>
         </ul>
       </header>
       <section>
@@ -35,34 +37,28 @@
 
 <p>Thus, an ftp command like <code>QUIT</code> will be called like:</p>
 
-<div class="highlight">
-<pre><span class="nx">Ftp</span><span class="p">.</span><span class="nx">raw</span><span class="p">.</span><span class="nx">quit</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight"><pre><span class="nx">Ftp</span><span class="p">.</span><span class="nx">raw</span><span class="p">.</span><span class="nx">quit</span><span class="p">(</span><span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span>
         <span class="k">throw</span> <span class="nx">err</span><span class="p">;</span>
 
     <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Bye!"</span><span class="p">);</span>
 <span class="p">});</span>
-</pre>
-</div>
-
+</pre></div>
 
 <p>and a command like <code>MKD</code> (make directory) which accepts parameters, will look like this:</p>
 
-<div class="highlight">
-<pre><span class="nx">Ftp</span><span class="p">.</span><span class="nx">raw</span><span class="p">.</span><span class="nx">mkd</span><span class="p">(</span><span class="s2">"/new_dir"</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight"><pre><span class="nx">Ftp</span><span class="p">.</span><span class="nx">raw</span><span class="p">.</span><span class="nx">mkd</span><span class="p">(</span><span class="s2">"/new_dir"</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="nx">err</span><span class="p">)</span>
         <span class="k">throw</span> <span class="nx">err</span><span class="p">;</span>
 
     <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span> <span class="c1">// Print FTP response</span>
 <span class="p">});</span>
-</pre>
-</div>
+</pre></div>
 
+<h2>
+<a name="usage-examples" class="anchor" href="#usage-examples"><span class="octicon octicon-link"></span></a>Usage examples</h2>
 
-<h2>Usage examples</h2>
-
-<div class="highlight">
-<pre><span class="c1">// Initialize some common variables</span>
+<div class="highlight"><pre><span class="c1">// Initialize some common variables</span>
 <span class="kd">var</span> <span class="nx">user</span> <span class="o">=</span> <span class="s2">"johndoe"</span><span class="p">;</span>
 <span class="kd">var</span> <span class="nx">pass</span> <span class="o">=</span> <span class="s2">"12345"</span><span class="p">;</span>
 
@@ -118,41 +114,49 @@
 
     <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">text</span><span class="p">);</span>
 <span class="p">});</span>
-</pre>
-</div>
-
+</pre></div>
 
 <p>You can find more usage examples in the unit tests for it. This documentation
 will grow as jsftp evolves, I promise!</p>
 
-<h2>API</h2>
+<h2>
+<a name="api" class="anchor" href="#api"><span class="octicon octicon-link"></span></a>API</h2>
 
-<h3>Properties</h3>
+<h3>
+<a name="properties" class="anchor" href="#properties"><span class="octicon octicon-link"></span></a>Properties</h3>
 
-<h4>Ftp.host</h4>
+<h4>
+<a name="ftphost" class="anchor" href="#ftphost"><span class="octicon octicon-link"></span></a>Ftp.host</h4>
 
 <p>Host name for the current FTP server.</p>
 
-<h4>Ftp.port</h4>
+<h4>
+<a name="ftpport" class="anchor" href="#ftpport"><span class="octicon octicon-link"></span></a>Ftp.port</h4>
 
 <p>Port number for the current FTP server (defaults to 21).</p>
 
-<h4>Ftp.socket</h4>
+<h4>
+<a name="ftpsocket" class="anchor" href="#ftpsocket"><span class="octicon octicon-link"></span></a>Ftp.socket</h4>
 
 <p>NodeJS socket for the current FTP server.</p>
 
-<h4>Ftp.dataConn</h4>
+<h4>
+<a name="ftpdataconn" class="anchor" href="#ftpdataconn"><span class="octicon octicon-link"></span></a>Ftp.dataConn</h4>
 
 <p>NodeJS socket for the current passive connection, if any.</p>
 
-<h4>Ftp.features</h4>
+<h4>
+<a name="ftpfeatures" class="anchor" href="#ftpfeatures"><span class="octicon octicon-link"></span></a>Ftp.features</h4>
 
 <p><code>features</code> is an array of feature names for the current FTP server. It is
 generated when the user authenticates with the <code>auth</code> method.</p>
 
-<h3>Methods</h3>
+<h3>
+<a name="methods" class="anchor" href="#methods"><span class="octicon octicon-link"></span></a>Methods</h3>
 
-<h4><code>Ftp.raw.FTP_COMMAND([params], callback)</code></h4>
+<h4>
+<a name="ftprawftp_commandparams-callback" class="anchor" href="#ftprawftp_commandparams-callback"><span class="octicon octicon-link"></span></a><code>Ftp.raw.FTP_COMMAND([params], callback)</code>
+</h4>
 
 <p>All the standard FTP commands are available under the <code>raw</code> namespace. These
 commands might accept parameters or not, but they always accept a callback
@@ -161,45 +165,61 @@ from the server (usually a 4xx or 5xx error code) and the data is an object
 that contains two properties: <code>code</code> and <code>text</code>. <code>code</code> is an integer indicating
 the response code of the response and <code>text</code> is the response stgring itself.</p>
 
-<h4><code>Ftp.auth(username, password, callback)</code></h4>
+<h4>
+<a name="ftpauthusername-password-callback" class="anchor" href="#ftpauthusername-password-callback"><span class="octicon octicon-link"></span></a><code>Ftp.auth(username, password, callback)</code>
+</h4>
 
 <p>Authenticates the user with the given username and password. If null or empty
 values are passed for those, <code>auth</code> will use anonymous credentials. <code>callback</code>
 will be called with the response text in case of successful login or with an
 error as a first parameter, in normal Node fashion.</p>
 
-<h4><code>Ftp.list(filePath, callback)</code></h4>
+<h4>
+<a name="ftplistfilepath-callback" class="anchor" href="#ftplistfilepath-callback"><span class="octicon octicon-link"></span></a><code>Ftp.list(filePath, callback)</code>
+</h4>
 
 <p>Lists <code>filePath</code> contents using a passive connection.</p>
 
-<h4><code>Ftp.get(filePath, callback)</code></h4>
+<h4>
+<a name="ftpgetfilepath-callback" class="anchor" href="#ftpgetfilepath-callback"><span class="octicon octicon-link"></span></a><code>Ftp.get(filePath, callback)</code>
+</h4>
 
 <p>Downloads <code>filePath</code> from the server.</p>
 
-<h4><code>Ftp.put(filePath, buffer, callback)</code></h4>
+<h4>
+<a name="ftpputfilepath-buffer-callback" class="anchor" href="#ftpputfilepath-buffer-callback"><span class="octicon octicon-link"></span></a><code>Ftp.put(filePath, buffer, callback)</code>
+</h4>
 
 <p>Uploads a file to <code>filePath</code>. It accepts a <code>buffer</code> parameter that will be
 written in the remote file.</p>
 
-<h4><code>Ftp.rename(from, to, callback)</code></h4>
+<h4>
+<a name="ftprenamefrom-to-callback" class="anchor" href="#ftprenamefrom-to-callback"><span class="octicon octicon-link"></span></a><code>Ftp.rename(from, to, callback)</code>
+</h4>
 
 <p>Renames a file in the server. <code>from</code> and <code>to</code> are both filepaths.</p>
 
-<h4><code>Ftp.ls(filePath, callback)</code></h4>
+<h4>
+<a name="ftplsfilepath-callback" class="anchor" href="#ftplsfilepath-callback"><span class="octicon octicon-link"></span></a><code>Ftp.ls(filePath, callback)</code>
+</h4>
 
 <p>Lists information about files or directories and yields an array of file objects with parsed file properties to the callback. You should use this function instead of <code>stat</code> or <code>list</code> in case you need to do something with the individual files properties.</p>
 
-<h4><code>Ftp.keepAlive()</code></h4>
+<h4>
+<a name="ftpkeepalive" class="anchor" href="#ftpkeepalive"><span class="octicon octicon-link"></span></a><code>Ftp.keepAlive()</code>
+</h4>
 
 <p>Refreshes the interval thats keep the server connection active. There is no
 need to call this method since it is taken care internally</p>
 
-<h2>Installation</h2>
+<h2>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
 
 <pre><code>npm install jsftp
 </code></pre>
 
-<h2>Tests</h2>
+<h2>
+<a name="tests" class="anchor" href="#tests"><span class="octicon octicon-link"></span></a>Tests</h2>
 
 <p>The test script fires up by default the FTP server that comes with OSX. You
 will have to put your OSX user credentials in <code>jsftp_test.js</code> if you want to
@@ -220,16 +240,17 @@ run the FTP service. In that case you should run the tests as <code>sudo</code>:
 <p>Please note that running scripts as sudo is dangerous and you will grant the
 script to do anything in your server. You should do it at your own risk.</p>
 
-<h2>License</h2>
+<h2>
+<a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h2>
 
 <p>See LICENSE.</p>
       </section>
-      <footer>
-        <p>This project is maintained by <a href="https://github.com/sergi">sergi</a></p>
-        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
-      </footer>
     </div>
-    <script src="javascripts/scale.fix.js"></script>
+    <footer>
+      <p>Project maintained by <a href="https://github.com/sergi">sergi</a></p>
+      <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
+    </footer>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
               <script type="text/javascript">
             var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
             document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
