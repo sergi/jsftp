@@ -8,17 +8,17 @@ and conciseness. It doesn't get in the way and plays nice with streaming APIs.
 versions, it is NOT a drop-in replacement. Please be careful when upgrading. The
 API changes are not drastic at all and it is all documented below. If you do not
 want to upgrade yet you should stay with version 0.6.0, the last one before the
-upgrade.**
+upgrade. The API docs below are updated for 1.0.**
 
 Starting it up
 --------------
 
 ```javascript
-var ftp = require("jsftp");
+var Ftp = require("jsftp");
 
 // The constructor accepts the parameters `host`, `port`, `user` and `pass`.
 // `port` defaults to `21`.
-var myFtp = new ftp({
+var myFtp = new Ftp({
   host: "myserver.com",
   user: "user", // defaults to "anonymous"
   pass: "1234" // defaults to "@anonymous"
@@ -30,7 +30,7 @@ methods in the `Ftp` object. It also provides several convenience methods for
 actions that require complex chains of commands (e.g. uploading and retrieving
 files, passive operations).
 
-When commands succeed they always pass the response of the server to the
+When raw commands succeed they always pass the response of the server to the
 callback, in the form of an object that contains two properties: `code`, which
 is the response code of the FTP operation, and `text`, which is the complete
 text of the response.
@@ -58,64 +58,7 @@ Ftp.raw.mkd("/new_dir", function(err, data) {
 });
 ```
 
-Common usage examples
---------------
 
-```javascript
-
-// Create a directory
-ftp.raw.mkd("/example_dir", function(err, data) {
-    if (err) return console.error(err);
-
-    console.log(data.text);
-});
-
-// Delete a directory
-ftp.raw.rmd("/example_dir", function(err, data) {
-    if (err) return console.error(err);
-
-    console.log(data.text);
-});
-
-// Listing a directory
-ftp.ls("/example_dir", function(err, files){
-    if (err) return console.error(err);
-    console.log(files); // Contains an array of file objects
-});
-
-// Retrieving a file using streams
-ftp.getGetSocket("/test_dir/testfile.txt"), function(err, readable) {
-    if (err) return console.error(err);
-
-    var pieces = [];
-    // `readable` is a stream, so we can attach events to it now
-    readable.on("data", function(p) { pieces.push(p); });
-    readable.on("close", function(err) {
-        if (err) return console.error(new Error("readable connection error"));
-
-        // `Ftp._concat` is an internal method used to concatenate buffers, it
-        // is used here only for illustration purposes.
-        console.log(Ftp._concat(pieces)); // print the contents of the file
-    });
-
-    // The readable stream is already paused, we have to resume it so it can
-    // start streaming.
-    readable.resume();
-});
-
-// Storing a file in the FTP server, using streams
-var originalData = Fs.createReadStream("sourceFile.txt"));
-originalData.pause();
-
-ftp.getPutSocket("/remote_folder/sourceFileCopy.txt"), function(err, socket) {
-    if (err) return console.error(err);
-    originalData.pipe(socket); // Transfer from source to the remote file
-    originalData.resume();
-});
-```
-
-You can find more usage examples in the [unit tests](https://github.com/sergi/jsftp/blob/master/test/jsftp_test.js). This documentation
-will grow as jsftp evolves.
 
 
 API and examples
@@ -236,29 +179,35 @@ ftp.put(buffer, 'path/to/remote/file.txt', function(hadError) {
 #### Ftp.rename(from, to, callback)
 Renames a file in the server. `from` and `to` are both filepaths.
 
+``javascript
+ftp.rename(from, to, function(err, res) {
+  if (!err)
+    console.log("Renaming successful!");
+});
+```
 
 #### Ftp.keepAlive()
-Refreshes the interval thats keep the server connection active. There is no
-need to call this method since it is taken care internally
+Refreshes the interval thats keep the server connection active.
+
+You can find more usage examples in the [unit tests](https://github.com/sergi/jsftp/blob/master/test/jsftp_test.js). This documentation
+will grow as jsftp evolves.
 
 Installation
 ------------
 
-With NPM:
-
     npm install jsftp
-
-From GitHub:
-
-    git clone https://github.com/sergi/jsftp.git
-
 
 Test coverage
 -------------
 
-Overall coverage rate (v1.0.0):
-  lines......: 86.8% (342 of 394 lines)
-  functions..: 88.4% (76 of 86 functions)
+In order to run coverage reports:
+
+    npm install --dev
+    make coverage
+
+Current overall coverage rate:
+  lines......: 92.1% (316 of 343 lines)
+  functions..: 91.0% (71 of 78 functions)
 
 
 Tests
@@ -267,7 +216,7 @@ Tests
 To run the tests:
 
     npm install --dev
-    npm test
+    make test
 
 Changelog
 ---------
