@@ -179,7 +179,7 @@ ftp.put(buffer, 'path/to/remote/file.txt', function(hadError) {
 #### Ftp.rename(from, to, callback)
 Renames a file in the server. `from` and `to` are both filepaths.
 
-``javascript
+```javascript
 ftp.rename(from, to, function(err, res) {
   if (!err)
     console.log("Renaming successful!");
