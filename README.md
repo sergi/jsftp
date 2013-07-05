@@ -218,26 +218,6 @@ To run the tests:
     npm install --dev
     make test
 
-Changelog
----------
-
-**1.0.0**
-- Big refactoring and rewriting, better use of streams.
-
-**0.5.8**
-- Fixed bad filename parsing on some cases
-
-**0.5.7**
-- Fixed bug when parsing truncated file listings
-
-**0.5.6**
-- Fixed bug in which passive requests would ignore the host if it was not the
-  same as the original host.
-
-**0.5.5**
-- Solved issues and hangs when uploading big files
-
-
 License
 -------
 
