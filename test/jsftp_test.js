@@ -109,6 +109,20 @@ describe("jsftp test suite", function() {
     next();
   });
 
+  it("test initialize bad host", function(next) {
+    var ftp2 = new Ftp({
+      host: "badhost",
+      user: "user",
+      port: 21,
+      pass: "12345"
+    });
+
+    ftp2.on("error", function(err) {
+      assert.equal(err.code, 'ENOTFOUND');
+      next();
+    });
+  });
+
   it("test initialize", function(next) {
     assert.equal(ftp.host, FTPCredentials.host);
     assert.equal(ftp.port, FTPCredentials.port);
