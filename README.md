@@ -1,10 +1,12 @@
 jsftp <a href="http://flattr.com/thing/1452098/" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>
 =====
 
-jsftp is a client FTP library for NodeJS that focuses on correctness, clarity
+A client FTP library for NodeJS that focuses on correctness, clarity
 and conciseness. It doesn't get in the way and plays nice with streaming APIs.
 
-**BIG Warning: The latest version (1.0.0) of jsftp breaks API compatibility with previous
+[![NPM](https://nodei.co/npm/jsftp.png)](https://nodei.co/npm/jsftp/)
+
+**Warning: The latest version (1.0.0) of jsftp breaks API compatibility with previous
 versions, it is NOT a drop-in replacement. Please be careful when upgrading. The
 API changes are not drastic at all and it is all documented below. If you do not
 want to upgrade yet you should stay with version 0.6.0, the last one before the
@@ -14,12 +16,11 @@ Starting it up
 --------------
 
 ```javascript
-var Ftp = require("jsftp");
+var JSFtp = require("jsftp");
 
-// The constructor accepts the parameters `host`, `port`, `user` and `pass`.
-// `port` defaults to `21`.
-var myFtp = new Ftp({
+var Ftp = new JSFtp({
   host: "myserver.com",
+  port: 3331, // defaults to 21
   user: "user", // defaults to "anonymous"
   pass: "1234" // defaults to "@anonymous"
 };
@@ -28,14 +29,14 @@ var myFtp = new Ftp({
 jsftp gives you access to all the raw commands of the FTP protocol in form of
 methods in the `Ftp` object. It also provides several convenience methods for
 actions that require complex chains of commands (e.g. uploading and retrieving
-files, passive operations).
+files, passive operations), as shown below.
 
 When raw commands succeed they always pass the response of the server to the
 callback, in the form of an object that contains two properties: `code`, which
 is the response code of the FTP operation, and `text`, which is the complete
 text of the response.
 
-Raw (or native) commands are accessible in the form `Ftp.raw["desired_command"](params, callback)`
+Raw (or native) commands are accessible in the form `Ftp.raw["command"](params, callback)`
 
 Thus, a command like `QUIT` will be called like this:
 
@@ -53,18 +54,28 @@ and a command like `MKD` (make directory), which accepts parameters, looks like 
 Ftp.raw.mkd("/new_dir", function(err, data) {
     if (err) return console.error(err);
 
-    console.log(data.text); // Presenting the FTP response text to the user
-    console.log(data.code); // Presenting the FTP response code to the user
+    console.log(data.text); // Show the FTP response text to the user
+    console.log(data.code); // Show the FTP response code to the user
 });
 ```
-
-
-
 
 API and examples
 ----------------
 
-### Properties
+#### new Ftp(options)
+  - `options` is an object with the following properties:
+
+  ```javascript
+  {
+    host: 'localhost', // Host name for the current FTP server.
+    port: 3333, // Port number for the current FTP server (defaults to 21).
+    user: 'user', // Username
+    pass: 'pass', // Password
+  }
+  ```
+
+Creates a new Ftp instance.
+
 
 #### Ftp.host
 
@@ -140,7 +151,7 @@ Gives back a paused socket with the file contents ready to be streamed,
 or calls the callback with an error if not successful.
 
 ```javascript
-  var str = ""; // We will store the contents of the file in this string
+  var str = ""; // Will store the contents of the file
   ftp.get('remote/path/file.txt', function(err, socket) {
     if (err) return;
 
@@ -205,15 +216,15 @@ In order to run coverage reports:
     npm install --dev
     make coverage
 
-Current overall coverage rate:
-  lines......: 92.1% (316 of 343 lines)
-  functions..: 91.0% (71 of 78 functions)
+    Current overall coverage rate:
+      lines......: 92.1% (316 of 343 lines)
+      functions..: 91.0% (71 of 78 functions)
 
 
 Tests
 -----
 
-To run the tests:
+To run tests:
 
     npm install --dev
     make test
