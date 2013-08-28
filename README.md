@@ -23,7 +23,7 @@ var Ftp = new JSFtp({
   port: 3331, // defaults to 21
   user: "user", // defaults to "anonymous"
   pass: "1234" // defaults to "@anonymous"
-};
+});
 ```
 
 jsftp gives you access to all the raw commands of the FTP protocol in form of
