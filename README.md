@@ -168,7 +168,7 @@ or calls the callback with an error if not successful.
 Stores the remote file directly in the given local path.
 
 ```javascript
-  ftp.get('remote/file.txt, 'local/file.txt, function(hadErr) {
+  ftp.get('remote/file.txt', 'local/file.txt', function(hadErr) {
     if (hadErr)
       console.error('There was an error retrieving the file.');
     else
