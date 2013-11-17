@@ -145,7 +145,8 @@ describe("jsftp test suite", function() {
     };
     var data = {
       code: 150,
-      text: "150 File status okay; about to open data connection."
+      text: "150 File status okay; about to open data connection.",
+      isMark: true
     };
 
     ftp.cmdBuffer_ = [
@@ -163,7 +164,8 @@ describe("jsftp test suite", function() {
     var cb = sinon.spy();
     var data = {
       code: 150,
-      text: "150 File status okay; about to open data connection."
+      text: "150 File status okay; about to open data connection.",
+      isMark: true
     };
 
     ftp.cmdBuffer_ = [
@@ -195,16 +197,20 @@ describe("jsftp test suite", function() {
     };
     var data1 = {
       code: 150,
-      text: "150 File status okay; about to open data connection."
+      text: "150 File status okay; about to open data connection.",
+      isMark: true
     };
     var data2 = {
       code: 226,
-      text: "226 Transfer complete."
+      text: "226 Transfer complete.",
+      isMark: false
     };
 
     ftp.cmdBuffer_ = [
       ["retr fakefile.txt", cb],
-      ["list /", function() {}]
+      ["list /",
+        function() {}
+      ]
     ];
     ftp.parse = sinon.spy();
     ftp.ignoreCmdCode = 150;
@@ -215,19 +221,6 @@ describe("jsftp test suite", function() {
     assert.equal(ftp.ignoreCmdCode, null);
     assert(ftp.parse.calledOnce);
     next();
-  });
-
-  it("test getFeatures", function(next) {
-    ftp.getFeatures(function(err, feats) {
-      assert.ok(Array.isArray(feats));
-      assert.ok(Array.isArray(ftp.features));
-      assert.ok(ftp.system.length > 0);
-
-      var feat = ftp.features[0];
-      assert.ok(ftp.hasFeat(feat));
-      assert.equal(false, ftp.hasFeat("madeup-feat"));
-      next();
-    });
   });
 
   it("test getFeatures", function(next) {
@@ -689,7 +682,7 @@ drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
       });
 
       ftp.ls(paths[1], function showFile(err, res1) {
-        assert.ok(!!err);
+        assert.ok( !! err);
         processed += 1;
         if (processed === 2) next();
       });
