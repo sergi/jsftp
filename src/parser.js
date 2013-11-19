@@ -86,6 +86,67 @@ exports.access = {
   WORLD_ACCESS: 2
 };
 
+function splitEntries(entries) {
+  if (typeof entries === "string") {
+    entries = entries.split(/\r?\n/);
+  }
+  return entries;
+}
+
+var RE_RES = /^(\d\d\d)\s(.*)/;
+var RE_MULTI = /^(\d\d\d)-/;
+var RE_SERVER_RESPONSE = /^(\d\d\d)(.*)/;
+
+exports.parseFtpEntries = function parseFtpEntries(listing, callback) {
+  var t, parsedEntry;
+  var i = 0;
+  var parsed = [];
+  var entries = splitEntries(listing);
+  async.eachSeries(entries, function(entry, next) {
+    function _next() {
+      i += 1;
+      next();
+    }
+
+    // Some servers include an official code-multiline sign at the beginning
+    // of every string. We must strip it if that's the case.
+    if (RE_MULTI.test(entry))
+      entry = entry.substr(3);
+
+    entry = entry.trim();
+
+    // Filter file-listing results from 'STAT' command, since they include
+    // server responses before and after the file listing.
+    // Issue: https://github.com/sergi/jsftp/issues/3
+    if (RE_SERVER_RESPONSE.test(entry) ||
+      RE_RES.test(entry) || RE_MULTI.test(entry)) {
+      return _next();
+    }
+
+    parsedEntry = parseEntry(entry);
+    if (parsedEntry === null) {
+      if (entries[i + 1]) {
+        t = parseEntry(entry + entries[i + 1]);
+        if (t !== null) {
+          entries[i + 1] = entry + entries[i + 1];
+          return _next();
+        }
+      }
+
+      if (entries[i - 1] && parsed.length > 0) {
+        t = parseEntry(entries[i - 1] + entry);
+        if (t !== null) {
+          parsed[parsed.length - 1] = t;
+        }
+      }
+    }
+    else if (parsedEntry) {
+      parsed.push(parsedEntry);
+    }
+    _next();
+  }, function() { callback(null, parsed); });
+};
+
 /**
  * Selects which parser to use depending on the first character of the line to
  * parse.
@@ -94,9 +155,7 @@ exports.access = {
  * @param callback {Function} Callback function with error or result.
  */
 exports.parseEntries = function(entries, callback) {
-  if (typeof entries === "string") {
-    entries = entries.split(/(\r\n|\n)/);
-  }
+  entries = splitEntries(entries);
   async.map(entries, parseEntry, callback);
 };
 

@@ -744,6 +744,26 @@ drwx------    2 0        0            4096 Apr 16  2011 lost+found\r\n"
     });
   });
 
+  it("test FTP listing with bad line breaks", function(next) {
+    var badStr = "\
+213-Status follows:\r\n\
+-rw-r--r-- 1 0 0 105981956 Dec 20 18:07 GAT\r\n\
+SBY.MPG\r\n\
+-rw-r--r-- 1 0 0 74450948 Jan 17 18:16 GIJO.MPG\r\n\
+drwxr-xr-x    3 0        0            4096 Apr 16  2011 bourd\n\
+arie\r\n\
+drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
+213 End of status";
+
+    Parser.parseFtpEntries(badStr, function(err, entries) {
+      assert.equal("GATSBY.MPG", entries[0].name);
+      assert.equal("GIJO.MPG", entries[1].name);
+      assert.equal("bourdarie", entries[2].name);
+      assert.equal("denton", entries[3].name);
+      next();
+    });
+  });
+
 
   /*
    * We are not supporting MLSx commands yet
