@@ -274,26 +274,6 @@ describe("jsftp test suite", function() {
     });
   });
 
-  it("test listing with bad line breaks", function(next) {
-    var badStr = "\
-213-Status follows:\r\n\
--rw-r--r-- 1 0 0 105981956 Dec 20 18:07 GAT\r\n\
-SBY.MPG\r\n\
--rw-r--r-- 1 0 0 74450948 Jan 17 18:16 GIJO.MPG\r\n\
-drwxr-xr-x    3 0        0            4096 Apr 16  2011 bourd\n\
-arie\r\n\
-drwxr-xr-x    2 0        0            4096 Apr 16  2011 denton\r\n\
-213 End of status";
-
-    var entries = Utils.parseEntry(badStr);
-    assert.equal("GATSBY.MPG", entries[0].name);
-    assert.equal("GIJO.MPG", entries[1].name);
-    assert.equal("bourdarie", entries[2].name);
-    assert.equal("denton", entries[3].name);
-
-    next();
-  });
-
   it("test passive listing of current directory", function(next) {
     ftp.list(remoteCWD, function(err, res) {
       assert.ok(!err, err);
