@@ -7,17 +7,11 @@ JSHINT=node_modules/.bin/jshint
 # test files must end with ".test.js"
 TESTS=$(shell find test/ -name "*.test.js")
 
-clean:
-	rm -rf reports
-
-test:
-	$(MOCHA) -R spec $(TESTS)
-
 _MOCHA="node_modules/.bin/_mocha"
 coverage:
 	@# check if reports folder exists, if not create it
 	@test -d reports || mkdir reports
-	$(ISTANBUL) cover --report lcovonly --dir ./reports $(_MOCHA) -- -R spec $(TESTS)
+	$(ISTANBUL) cover --report lcovonly --dir ./reports $(_MOCHA) -- -R spec --colors $(TESTS)
 	genhtml reports/lcov.info --output-directory reports/
 
 jshint:

@@ -76,7 +76,6 @@ function getLocalPath(path) {
 }
 var CWD = process.cwd() + "/test";
 var remoteCWD = "test/test_c9";
-var daemon;
 exec('mkdir', [__dirname + "/" + remoteCWD]);
 
 describe("jsftp test suite", function() {
@@ -99,9 +98,6 @@ describe("jsftp test suite", function() {
   });
 
   afterEach(function(next) {
-    if (daemon)
-      daemon.kill();
-
     setTimeout(function() {
       server.stop();
       if (ftp) {
