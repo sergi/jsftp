@@ -362,6 +362,26 @@ describe("jsftp test suite", function() {
     });
   });
 
+  it("test streaming put", function(next) {
+    var readStream = Fs.createReadStream(__filename);
+    var remoteFileName = "file_ftp_test.txt";
+    var filePath = getRemotePath(remoteFileName);
+    ftp.put(readStream, filePath, function(hadError) {
+      assert.ok(!hadError);
+
+      ftp.ls(filePath, function(err, res) {
+        assert.ok(!err);
+        assert.equal(res[0].size, Fs.statSync(CWD + "/jsftp_test.js").size);
+
+        ftp.raw.dele(filePath, function(err, data) {
+          assert.ok(!err);
+
+          next();
+        });
+      });
+    });
+  });
+
   it("test rename a file", function(next) {
     var from = getRemotePath("file_ftp_test.txt");
     var to = getRemotePath("file_ftp_test_renamed.txt");
