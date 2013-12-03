@@ -13,7 +13,6 @@ var Fs = require("fs");
 var exec = require('child_process').spawn;
 var Ftp = require("../");
 var Path = require("path");
-var Utils = require("../lib/utils");
 var sinon = require("sinon");
 var EventEmitter = require("events").EventEmitter;
 var ftpServer = require("ftp-test-server");
