@@ -227,6 +227,10 @@ describe("jsftp test suite", function() {
       var feat = ftp.features[0];
       assert.ok(ftp.hasFeat(feat));
       assert.equal(false, ftp.hasFeat("madeup-feat"));
+      assert.equal(false, ftp.hasFeat());
+      assert.equal(false, ftp.hasFeat(null));
+      assert.equal(false, ftp.hasFeat(''));
+      assert.equal(false, ftp.hasFeat(0));
       next();
     });
   });
