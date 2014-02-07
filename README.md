@@ -197,8 +197,8 @@ ftp.rename(from, to, function(err, res) {
 });
 ```
 
-#### Ftp.keepAlive()
-Refreshes the interval thats keep the server connection active.
+#### Ftp.keepAlive([wait])
+Refreshes the interval thats keep the server connection active. `wait` is an optional time period (in milliseconds) to wait between intervals.
 
 You can find more usage examples in the [unit tests](https://github.com/sergi/jsftp/blob/master/test/jsftp_test.js). This documentation
 will grow as jsftp evolves.
@@ -217,8 +217,8 @@ In order to run coverage reports:
     make coverage
 
     Current overall coverage rate:
-      lines......: 92.1% (316 of 343 lines)
-      functions..: 91.0% (71 of 78 functions)
+      lines......: 95.5% (278 of 291 lines)
+      functions..: 100% (69 of 69 functions)
 
 
 Tests

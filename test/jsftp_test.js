@@ -733,4 +733,14 @@ describe("jsftp test suite", function() {
       next();
     });
   });
+
+  it("Test keep-alive with NOOP", function(next) {
+    this.timeout(10000);
+    ftp.keepAlive();
+    ftp.keepAlive(1000);
+    setTimeout(function() {
+      ftp.destroy();
+      next();
+    }, 5000);
+  });
 });
