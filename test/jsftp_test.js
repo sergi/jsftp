@@ -687,4 +687,26 @@ describe("jsftp test suite", function() {
       });
     });
   });
+
+  it("Test raw method with PWD", function(next) {
+    ftp.raw('pwd', function(err, res) {
+      assert(!err, err);
+
+      var code = parseInt(res.code, 10);
+      assert.ok(code === 257, "Raw PWD command was not successful: " + res.text);
+
+      next();
+    });
+  });
+
+  it("Test raw method with HELP", function(next) {
+    ftp.raw('help', function(err, res) {
+      assert(!err, err);
+
+      var code = parseInt(res.code, 10);
+      assert.ok(code === 214, "Raw HELP command was not successful: " + res.text);
+
+      next();
+    });
+  });
 });
