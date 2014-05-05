@@ -743,4 +743,21 @@ describe("jsftp test suite", function() {
       next();
     }, 5000);
   });
+
+  it("Test debug mode", function(next) {
+    var debugCredentials = JSON.parse(JSON.stringify(FTPCredentials));
+    debugCredentials.debugMode = true;
+
+    var ftp2 = new Ftp(debugCredentials);
+    ftp2.once('jsftp_debug', function(type, data) {
+      next();
+    });
+  });
+
+  it("Test debug mode `setDebugMode`", function(next) {
+    ftp.setDebugMode(true);
+    ftp.once('jsftp_debug', function(type, data) {
+      next();
+    });
+  });
 });
