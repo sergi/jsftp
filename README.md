@@ -6,12 +6,6 @@ and conciseness. It doesn't get in the way and plays nice with streaming APIs.
 
 [![NPM](https://nodei.co/npm/jsftp.png)](https://nodei.co/npm/jsftp/)
 
-**Warning: The latest version (1.0.0) of jsftp breaks API compatibility with previous
-versions, it is NOT a drop-in replacement. Please be careful when upgrading. The
-API changes are not drastic at all and it is all documented below. If you do not
-want to upgrade yet you should stay with version 0.6.0, the last one before the
-upgrade. The API docs below are updated for 1.0.**
-
 Starting it up
 --------------
 
