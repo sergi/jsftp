@@ -269,7 +269,7 @@ Tests
 To run tests:
 
     npm install --dev
-    make test
+    npm test
 
 License
 -------

@@ -154,7 +154,6 @@ describe("jsftp test suite", function() {
     assert(ftp.parse.calledWith(data, firstCmd));
     next();
   });
-
   it("test parseResponse with no mark", function(next) {
     var cb = sinon.spy();
     var data = {
@@ -307,7 +306,7 @@ describe("jsftp test suite", function() {
 
   it("test ftp node stat", function(next) {
     ftp.raw.pwd(function(err, res) {
-      var parent = /.*"(.*)".*/.exec(res.text)[1];
+      var parent = new RegExp('.*"(.*)".*').exec(res.text)[1];
       var path = Path.resolve(parent + "/" + remoteCWD);
       ftp.raw.stat(path, function(err, res) {
         assert.ok(!err, res);
