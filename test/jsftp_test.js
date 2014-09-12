@@ -304,6 +304,14 @@ describe("jsftp test suite", function() {
     });
   });
 
+  it("test passive listing of nonexisting directory", function(next) {
+    ftp.list('does-not-exist/', function(err, res) {
+      assert.equal(typeof err, 'object');
+      assert.ok(err.code === 450 || err.code === 550);
+      next();
+    });
+  });
+
   it("test ftp node stat", function(next) {
     ftp.raw.pwd(function(err, res) {
       var parent = new RegExp('.*"(.*)".*').exec(res.text)[1];
