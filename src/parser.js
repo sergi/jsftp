@@ -6,8 +6,6 @@
 
 "use strict";
 
-var async = require("async");
-
 /**
  * this is the regular expression used by Unix Parsers.
  *
@@ -52,10 +50,10 @@ var RE_UnixEntry = new RegExp(
 // 07-18-00  10:16AM       <DIR>          pub
 // 04-14-00  03:47PM                  589 readme.htm
 var RE_DOSEntry = new RegExp(
-  "(\\S+)\\s+(\\S+)\\s+"
-    + "(<DIR>)?\\s*"
-    + "([0-9]+)?\\s*"
-    + "(\\S.*)"
+  "(\\S+)\\s+(\\S+)\\s+" +
+  "(<DIR>)?\\s*" +
+  "([0-9]+)?\\s*" +
+  "(\\S.*)"
 );
 
 // Not used for now
@@ -102,16 +100,12 @@ exports.parseFtpEntries = function parseFtpEntries(listing, callback) {
   var i = 0;
   var parsed = [];
   var entries = splitEntries(listing);
-  async.eachSeries(entries, function(entry, next) {
-    function _next() {
-      i += 1;
-      next();
-    }
-
+  entries.forEach(function(entry, i) {
     // Some servers include an official code-multiline sign at the beginning
     // of every string. We must strip it if that's the case.
-    if (RE_MULTI.test(entry))
+    if (RE_MULTI.test(entry)) {
       entry = entry.substr(3);
+    }
 
     entry = entry.trim();
 
@@ -120,7 +114,7 @@ exports.parseFtpEntries = function parseFtpEntries(listing, callback) {
     // Issue: https://github.com/sergi/jsftp/issues/3
     if (RE_SERVER_RESPONSE.test(entry) ||
       RE_RES.test(entry) || RE_MULTI.test(entry)) {
-      return _next();
+      return;
     }
 
     parsedEntry = parseEntry(entry);
@@ -129,7 +123,7 @@ exports.parseFtpEntries = function parseFtpEntries(listing, callback) {
         t = parseEntry(entry + entries[i + 1]);
         if (t !== null) {
           entries[i + 1] = entry + entries[i + 1];
-          return _next();
+          return;
         }
       }
 
@@ -143,8 +137,9 @@ exports.parseFtpEntries = function parseFtpEntries(listing, callback) {
     else if (parsedEntry) {
       parsed.push(parsedEntry);
     }
-    _next();
-  }, function() { callback(null, parsed); });
+  });
+
+  callback(null, parsed);
 };
 
 /**
@@ -155,8 +150,9 @@ exports.parseFtpEntries = function parseFtpEntries(listing, callback) {
  * @param callback {Function} Callback function with error or result.
  */
 exports.parseEntries = function(entries, callback) {
-  entries = splitEntries(entries);
-  async.map(entries, parseEntry, callback);
+  callback(null, splitEntries(entries)
+    .map(parseEntry)
+    .filter(function(entry) { return !!entry; }));
 };
 
 /**
@@ -175,9 +171,8 @@ var parseEntry = exports.parseEntry = function(entry) {
   else if ('0123456789'.indexOf(c) > -1) {
     return parsers.msdos(entry);
   }
-  else {
-    return null;
-  }
+
+  return null;
 };
 
 var parsers = {
@@ -208,8 +203,9 @@ var parsers = {
       }
 
       // Ignoring '.' and '..' entries for now
-      if (name === "." || name === "..")
+      if (name === "." || name === "..") {
         return;
+      }
 
       //var endtoken = group[22];
 
@@ -272,8 +268,9 @@ var parsers = {
     var group = entry.match(RE_DOSEntry);
     var type;
 
-    if (!group)
+    if (!group) {
       return null;
+    }
 
     var replacer = function replacer(str, hour, min, ampm, offset, s) {
       return hour + ":" + min + " " + ampm;
@@ -285,8 +282,9 @@ var parsers = {
     var size = group[4];
     var name = group[5];
 
-    if (null == name || name === "." || name === "..")
+    if (null == name || name === "." || name === "..") {
       return null;
+    }
 
     if (dirString === "<DIR>") {
       type = exports.nodeTypes.DIRECTORY_TYPE;
