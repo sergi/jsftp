@@ -786,12 +786,13 @@ describe("jsftp test suite", function() {
       }
     }
 
-    function pushit() {
+    ftp.get(file1, function() {
       args.push(arguments[0]);
       onDone();
-    }
-
-    ftp.get(file1, pushit);
-    ftp.get(file2, pushit);
+    });
+    ftp.get(file2, function() {
+      args.push(arguments[0]);
+      onDone();
+    });
   });
 });
