@@ -20,7 +20,7 @@ var rimraf = require("rimraf");
 
 var concat = function(bufs) {
   var buffer, length = 0,
-    index = 0;
+  index = 0;
 
   if (!Array.isArray(bufs))
     bufs = Array.prototype.slice.call(arguments);
@@ -83,6 +83,7 @@ describe("jsftp test suite", function() {
     rimraf(getLocalPath(''), function() {
       Fs.mkdirSync(getLocalPath(''));
       Fs.writeFileSync(getLocalPath('testfile.txt'), "test");
+      Fs.writeFileSync(getLocalPath('testfile2.txt'), "test2");
 
       if (FTPCredentials.host === "localhost") {
         server = new ftpServer();
@@ -226,7 +227,7 @@ describe("jsftp test suite", function() {
         assert.equal(err.code, 530);
         assert.equal(data, null);
         next();
-    });
+      });
   });
 
   it("test invalid password", function(next) {
@@ -238,7 +239,7 @@ describe("jsftp test suite", function() {
         assert.equal(err.code, 530);
         assert.equal(data, null);
         next();
-    });
+      });
   });
 
   it("test getFeatures", function(next) {
@@ -766,5 +767,31 @@ describe("jsftp test suite", function() {
     ftp.once('jsftp_debug', function(type, data) {
       next();
     });
+  });
+
+  it("Test handling error on simultaneous PASV requests {#90}", function(next) {
+    var file1 = remoteCWD + "/testfile.txt";
+    var file2 = remoteCWD + "/testfile2.txt";
+
+    var counter = 0;
+    var args = [];
+    function onDone() {
+      counter += 1;
+      if (counter === 2) {
+        assert.ok(args.some(function(arg) {
+          return arg && arg.code === 'ECONNREFUSED' && arg.msg ===
+            'Probably trying a PASV operation while one is in progress';
+        }));
+        next();
+      }
+    }
+
+    function pushit() {
+      args.push(arguments[0]);
+      onDone();
+    }
+
+    ftp.get(file1, pushit);
+    ftp.get(file2, pushit);
   });
 });
