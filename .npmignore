@@ -3,3 +3,5 @@ coverage.html
 lib-cov
 reports
 .c9revisions
+test
+node_modules
