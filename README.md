@@ -228,7 +228,7 @@ including data related to the event. There are 3 possible types of events:
 - `response` events: These are response from the FTP server to the user's FTP
   commands
 
-- `user_command` events: These are commands that the user issuendss to the
+- `user_command` events: These are commands that the user issues to the
   FTP server.
 
 - `event:{event name}` events: These are other events mostly related to the server
