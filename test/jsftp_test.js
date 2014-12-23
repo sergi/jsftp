@@ -62,7 +62,7 @@ var concatStream = function(err, socket, callback) {
 var FTPCredentials = {
   host: "localhost",
   user: "user",
-  port: 3334,
+  port: 21,
   pass: "12345"
 };
 
@@ -242,7 +242,7 @@ describe("jsftp test suite", function() {
       });
   });
 
-  it.only("test getFeatures", function(next) {
+  it("test getFeatures", function(next) {
     ftp.getFeatures(function(err, feats) {
       assert.ok(Array.isArray(feats));
       assert.ok(Array.isArray(ftp.features));
