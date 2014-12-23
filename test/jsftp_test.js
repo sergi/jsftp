@@ -93,7 +93,7 @@ describe("jsftp test suite", function() {
       setTimeout(function() {
         ftp = new Ftp(FTPCredentials);
         next();
-      }, 100);
+      }, 200);
     });
   });
 
@@ -104,8 +104,8 @@ describe("jsftp test suite", function() {
         ftp.destroy();
         ftp = null;
       }
-    }, 50);
-    next();
+      next();
+    }, 100);
   });
 
   it("test initialize bad host", function(next) {
