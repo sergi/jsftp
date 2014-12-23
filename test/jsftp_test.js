@@ -108,7 +108,7 @@ describe("jsftp test suite", function() {
     next();
   });
 
-  it.only("test initialize bad host", function(next) {
+  it("test initialize bad host", function(next) {
     var ftp2 = new Ftp({
       host: "badhost",
       user: "user",
