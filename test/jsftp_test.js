@@ -514,7 +514,7 @@ describe("jsftp test suite", function() {
 
     Fs.writeFileSync(localPath, buffer);
 
-    ftp.getGetSocket(remotePath, function(err, socket) {
+    ftp.getRETRSocket(remotePath, function(err, socket) {
       assert.ok(!err, err);
 
       socket.resume();
@@ -540,7 +540,7 @@ describe("jsftp test suite", function() {
     var remotePath = getRemotePath("bigfile.test");
     var data = (new Array(1 * 1024 * 1024)).join("x");
 
-    ftp.getPutSocket(remotePath, function(err, socket) {
+    ftp.getSTORSocket(remotePath, function(err, socket) {
       assert.ok(!err, err);
 
       socket.write(data, function(err) {
@@ -560,7 +560,7 @@ describe("jsftp test suite", function() {
   it("test put a big file stream fail", function(next) {
     var remotePath = getRemotePath("/nonexisting/path/to/file.txt");
 
-    ftp.getPutSocket(remotePath, function(err, socket, res) {
+    ftp.getSTORSocket(remotePath, function(err, socket, res) {
       assert.ok( !! err, err);
       assert.equal(err.code, 550, err);
     }, function(err, res) {
@@ -625,7 +625,7 @@ describe("jsftp test suite", function() {
   it("test PASV streaming: Copy file using piping", function(next) {
     var filePath = getRemotePath("testfile.txt");
     var originalData = Fs.readFileSync(getLocalPath("testfile.txt"));
-    ftp.getGetSocket(filePath, function(err, readable) {
+    ftp.getRETRSocket(filePath, function(err, readable) {
       assert(!err, err);
       assert.ok(readable);
 
@@ -638,7 +638,7 @@ describe("jsftp test suite", function() {
       }
 
       var remoteCopy = filePath + ".bak";
-      ftp.getPutSocket(remoteCopy, function(err, socket) {
+      ftp.getSTORSocket(remoteCopy, function(err, socket) {
         assert.ok(!err, err);
         readable.pipe(socket);
         readable.resume();
@@ -648,7 +648,7 @@ describe("jsftp test suite", function() {
         assert.ok(!hadError);
 
         var str = "";
-        ftp.getGetSocket(remoteCopy, function(err, socket) {
+        ftp.getRETRSocket(remoteCopy, function(err, socket) {
           assert.ok(!err, err);
           socket.on("data", function(d) {
             str += d;
@@ -666,7 +666,7 @@ describe("jsftp test suite", function() {
   it("Test that streaming GET (RETR) retrieves a file properly", function(next) {
     var path = getLocalPath("testfile.txt");
     var originalData = Fs.readFileSync(path);
-    ftp.getGetSocket(getRemotePath("testfile.txt"), function(err, readable) {
+    ftp.getRETRSocket(getRemotePath("testfile.txt"), function(err, readable) {
       assert.ok(!err);
       concatStream(err, readable, function(err, buffer) {
         assert.ok(!err);
@@ -677,7 +677,7 @@ describe("jsftp test suite", function() {
   });
 
   it("Test that streaming GET (RETR) fails when a file is not present", function(next) {
-    ftp.getGetSocket("unexisting/file/path", function(err, readable) {
+    ftp.getRETRSocket("unexisting/file/path", function(err, readable) {
       assert.ok(err);
       assert.equal(550, err.code);
       next();
@@ -689,7 +689,7 @@ describe("jsftp test suite", function() {
     var originalData = Fs.createReadStream(getLocalPath("testfile.txt"));
     originalData.pause();
 
-    ftp.getPutSocket(getRemotePath("testfile.txt.bak"), function(err, socket) {
+    ftp.getSTORSocket(getRemotePath("testfile.txt.bak"), function(err, socket) {
       assert.ok(!err);
       originalData.pipe(socket);
       originalData.resume();
@@ -704,7 +704,7 @@ describe("jsftp test suite", function() {
   });
 
   it("Test that streaming PUT (STOR) fails when a file is not present", function(next) {
-    ftp.getPutSocket("unexisting/file/path", function(err, socket) {
+    ftp.getSTORSocket("unexisting/file/path", function(err, socket) {
       assert.ok(err);
       next();
     });
