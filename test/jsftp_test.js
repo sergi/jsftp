@@ -128,11 +128,10 @@ describe("jsftp test suite", function() {
     assert.equal(ftp.user, FTPCredentials.user);
 
     assert.ok(ftp instanceof EventEmitter);
-    assert.equal(ftp.pending.length, 0);
-    assert.equal(ftp.cmdBuffer_.length, 0);
+    assert.equal(ftp.commandQueue.length, 0);
 
     next();
-  })
+  });
 
   it("test parseResponse with mark", function(next) {
     var cb = sinon.spy();
@@ -145,12 +144,12 @@ describe("jsftp test suite", function() {
       isMark: true
     };
 
-    ftp.cmdBuffer_ = [
-      ["retr fakefile.txt", cb]
+    ftp.commandQueue = [
+      { action:"retr fakefile.txt", callback: cb }
     ];
     ftp.parse = sinon.spy();
 
-    var firstCmd = ftp.cmdBuffer_[0];
+    var firstCmd = ftp.commandQueue[0];
     ftp.parseResponse(data);
     assert(ftp.parse.calledWith(data, firstCmd));
     next();
@@ -163,8 +162,8 @@ describe("jsftp test suite", function() {
       isMark: true
     };
 
-    ftp.cmdBuffer_ = [
-      ["retr fakefile.txt", cb]
+    ftp.commandQueue = [
+      { action: "retr fakefile.txt", callback: cb }
     ];
     ftp.parse = sinon.spy();
 
@@ -201,11 +200,9 @@ describe("jsftp test suite", function() {
       isMark: false
     };
 
-    ftp.cmdBuffer_ = [
-      ["retr fakefile.txt", cb],
-      ["list /",
-        function() {}
-      ]
+    ftp.commandQueue = [
+      { action: "retr fakefile.txt", callback: cb },
+      { action: "list /", callback: function() {} }
     ];
     ftp.parse = sinon.spy();
     ftp.ignoreCmdCode = 150;
