@@ -127,7 +127,7 @@ describe("jsftp test suite", function() {
     }, 50);
   });
 
-  after(function() { console.log('kill');server.stop(); });
+  after(function() { server.stop(); });
 
   it("test initialize bad host", function(next) {
     var ftp2 = new Ftp({
@@ -778,7 +778,6 @@ describe("jsftp test suite", function() {
     function onDone() {
       counter += 1;
       if (counter === 2) {
-        console.log(args);
         assert.ok(args.some(function(arg) { return arg instanceof Error; }));
         next();
       }
