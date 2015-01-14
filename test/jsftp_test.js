@@ -798,16 +798,21 @@ describe("jsftp test suite", function() {
     });
   });
 
-  it("test set binary type", function(next) {
+  it.only("test set binary type", function(next) {
     ftp.setType('I', function(err, res) {
       assert.ok(!err);
       assert.equal(ftp.type, 'I');
       assert.equal(res.code, 200);
-      ftp.setType('A', function(err, res) {
+      ftp.setType('I', function(err, res) {
         assert.ok(!err);
-        assert.equal(ftp.type, 'A');
-        assert.equal(res.code, 200);
-        next();
+        assert.ok(!res);
+        assert.equal(ftp.type, 'I');
+        ftp.setType('A', function(err, res) {
+          assert.ok(!err);
+          assert.equal(ftp.type, 'A');
+          assert.equal(res.code, 200);
+          next();
+        });
       });
     });
   });
