@@ -129,8 +129,8 @@ array of strings with complete file information.
 
 ```javascript
 ftp.list(remoteCWD, function(err, res) {
-  res.forEach(function(file) {
-    console.log(file.name);
+  res.forEach(function(line) {
+    console.log(line);
   });
   // Prints something like
   // -rw-r--r--   1 sergi    staff           4 Jun 03 09:32 testfile1.txt
