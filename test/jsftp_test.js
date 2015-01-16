@@ -394,6 +394,7 @@ describe("jsftp test suite", function() {
   });
 
   it("test save a remote copy of a local file", function(next) {
+    this.timeout(10000);
     var filePath = getRemotePath("file_ftp_test.txt");
     var onProgress = sinon.spy();
     ftp.on('progress', onProgress);
@@ -783,7 +784,6 @@ describe("jsftp test suite", function() {
       }
     }
 
-
     ftp.raw.pwd(function(err) {
       assert.ok(!err);
 
@@ -798,7 +798,7 @@ describe("jsftp test suite", function() {
     });
   });
 
-  it.only("test set binary type", function(next) {
+  it("test set binary type", function(next) {
     ftp.setType('I', function(err, res) {
       assert.ok(!err);
       assert.equal(ftp.type, 'I');
