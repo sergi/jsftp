@@ -129,6 +129,19 @@ describe("jsftp test suite", function() {
 
   after(function() { server.stop(); });
 
+  it.only('test getPasvPort helper function', function() {
+    var response = '227 Entering Passive Mode (172,16,3,4,204,173)';
+    var port = 52397;
+    var host = '172.16.3.4';
+    var result = Ftp.getPasvPort(response);
+
+    assert.equal(port, result.port);
+    assert.equal(host, result.host);
+
+    var badResponse = '227 Entering Passive Mode (172,16,3,4,204)';
+    assert.throws(Ftp.getPasvPort.bind(Ftp, badResponse), /Bad passive/);
+  });
+
   it("test initialize bad host", function(next) {
     var ftp2 = new Ftp({
       host: "badhost",
