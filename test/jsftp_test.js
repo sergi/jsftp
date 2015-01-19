@@ -129,7 +129,7 @@ describe("jsftp test suite", function() {
 
   after(function() { server.stop(); });
 
-  it.only('test getPasvPort helper function', function() {
+  it('test getPasvPort helper function', function() {
     var response = '227 Entering Passive Mode (172,16,3,4,204,173)';
     var port = 52397;
     var host = '172.16.3.4';
