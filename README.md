@@ -1,5 +1,8 @@
-jsftp [![Build Status](https://secure.travis-ci.org/sergi/jsftp.png)](http://travis-ci.org/sergi/jsftp) <a href="http://flattr.com/thing/1452098/" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>
-=====
+# jsftp 
+
+[![Build Status](https://secure.travis-ci.org/sergi/jsftp.png)](http://travis-ci.org/sergi/jsftp) 
+[![NPM Downloads](https://img.shields.io/npm/dm/jsftp.svg?style=flat)](https://npmjs.org/package/jsftp)
+[![Coverage Status](https://coveralls.io/repos/sergi/jsftp/badge.svg?branch=v2.0)](https://coveralls.io/r/sergi/jsftp?branch=v2.0) <a href="http://flattr.com/thing/1452098/" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>
 
 A client FTP library for NodeJS that focuses on correctness, clarity
 and conciseness. It doesn't get in the way and plays nice with streaming APIs.
@@ -253,20 +256,11 @@ Installation
 Test coverage
 -------------
 
-In order to run coverage reports:
-
     npm install --dev
     make coverage
 
-    Current overall coverage rate:
-      lines......: 95.5% (278 of 291 lines)
-      functions..: 100% (69 of 69 functions)
-
-
 Tests
 -----
-
-To run tests:
 
     npm install --dev
     npm test

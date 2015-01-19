@@ -14,6 +14,10 @@ coverage:
 	$(ISTANBUL) cover --report lcovonly --dir ./reports $(_MOCHA) -- -R spec --colors $(TESTS)
 	genhtml reports/lcov.info --output-directory reports/
 
+coveralls:
+	rm -rf ./reports
+	$(ISTANBUL) cover $(_MOCHA) --report lcovonly --dir ./reports  -- -R spec $(TESTS) && cat ./reports/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./reports
+
 jshint:
 	$(JSHINT) lib test --show-non-errors
 

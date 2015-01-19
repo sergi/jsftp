@@ -28,12 +28,13 @@
     "parse-listing": "1.1.2"
   },
   "devDependencies": {
-    "mocha": "1.21.4",
-    "istanbul": "0.3.2",
-    "mocha-istanbul": "0.2.0",
-    "sinon": "1.10.3",
+    "coveralls": "^2.11.2",
     "ftp-test-server": "0.0.2",
-    "rimraf": "2.2.8"
+    "istanbul": "0.3.2",
+    "mocha": "1.21.4",
+    "mocha-istanbul": "0.2.0",
+    "rimraf": "2.2.8",
+    "sinon": "1.10.3"
   },
   "main": "./jsftp.js",
   "engines": {
