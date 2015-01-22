@@ -1,8 +1,9 @@
-# jsftp 
+# jsftp
 
 [![Build Status](https://secure.travis-ci.org/sergi/jsftp.png)](http://travis-ci.org/sergi/jsftp) 
 [![NPM Downloads](https://img.shields.io/npm/dm/jsftp.svg?style=flat)](https://npmjs.org/package/jsftp)
-[![Coverage Status](https://coveralls.io/repos/sergi/jsftp/badge.svg?branch=v2.0)](https://coveralls.io/r/sergi/jsftp?branch=v2.0) <a href="http://flattr.com/thing/1452098/" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>
+[![Coverage Status](https://coveralls.io/repos/sergi/jsftp/badge.svg?branch=v2.0)](https://coveralls.io/r/sergi/jsftp?branch=v2.0)
+[![Gratipay](https://img.shields.io/gratipay/sergimansilla.svg?style=flat)](https://www.gratipay.com/sergimansilla/)
 
 A client FTP library for NodeJS that focuses on correctness, clarity
 and conciseness. It doesn't get in the way and plays nice with streaming APIs.
