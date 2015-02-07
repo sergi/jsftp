@@ -1,7 +1,7 @@
 {
   "name": "jsftp",
   "id": "jsftp",
-  "version": "1.4.1",
+  "version": "1.5",
   "description": "A sane FTP client implementation for NodeJS",
   "keywords": [
     "ftp",
@@ -37,7 +37,7 @@
   },
   "main": "./jsftp.js",
   "engines": {
-    "node": ">=0.8.28"
+    "node": ">=0.10"
   },
   "scripts": {
     "test": "mocha -R spec -t 5000",

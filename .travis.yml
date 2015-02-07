@@ -1,8 +1,11 @@
 language: node_js
 node_js:
     - "0.10"
-    - "0.8"
-
+    - "0.12"
+    - iojs
+os:
+    - linux
+    - osx
 before_script:
     - "npm install --dev"
 
