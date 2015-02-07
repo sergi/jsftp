@@ -770,7 +770,7 @@ describe("jsftp test suite", function() {
     }, 5000);
   });
 
-  it("Test handling error on simultaneous PASV requests {#90}", function(next) {
+  it.skip("Test handling error on simultaneous PASV requests {#90}", function(next) {
     var file1 = remoteCWD + "/testfile.txt";
     var file2 = remoteCWD + "/testfile2.txt";
 
