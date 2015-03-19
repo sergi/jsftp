@@ -124,14 +124,12 @@ ftp.ls(".", function(err, res) {
 ```
 
 #### Ftp.list(filePath, callback)
-Lists `filePath` contents using a passive connection. Calls callback with an
-array of strings with complete file information.
+Lists `filePath` contents using a passive connection. Calls callback with a
+string containing the directory contents in long list format.
 
 ```javascript
 ftp.list(remoteCWD, function(err, res) {
-  res.forEach(function(line) {
-    console.log(line);
-  });
+  console.log(res);
   // Prints something like
   // -rw-r--r--   1 sergi    staff           4 Jun 03 09:32 testfile1.txt
   // -rw-r--r--   1 sergi    staff           4 Jun 03 09:31 testfile2.txt
