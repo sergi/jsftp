@@ -5,6 +5,7 @@
 *.bak
 *.pyc
 *.un~
+*.log
 node_modules
 coverage.html
 lib-cov
