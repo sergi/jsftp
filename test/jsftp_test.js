@@ -11,8 +11,10 @@
 var assert = require("assert");
 var Fs = require("fs");
 var exec = require('child_process').spawn;
+var path = require("path");
+
+var libpath = path.join('..',  process.env['VFS_FTP_COV'] ? 'lib-cov' : '../');
 var Ftp = require("../");
-var Path = require("path");
 var sinon = require("sinon");
 var EventEmitter = require("events").EventEmitter;
 var ftpServer = require("ftp-test-server");
@@ -68,24 +70,25 @@ var FTPCredentials = {
   pass: "12345"
 };
 
-function getRemotePath(path) {
-  return Path.join('test', 'test_c9', path);
+function getRemotePath(aPath) {
+  return path.join('test', 'test_c9', aPath);
 }
 
-function getLocalPath(path) {
-  return Path.join(process.cwd(), 'test', 'test_c9', path);
+function getLocalPath(aPath) {
+  return path.join(
+    process.cwd(), 'test', 'test_c9', aPath);
 }
 var CWD = process.cwd() + "/test";
 var remoteCWD = "test/test_c9";
 exec('mkdir', [__dirname + "/" + remoteCWD]);
 
 describe("jsftp test suite", function() {
+  var ftp, server;
   process.on('uncaughtException', function(err) {
     console.log('Caught exception: ' + err);
-    server.stop();
+    server && server.stop();
   });
 
-  var ftp, server;
   before(function(done) {
     if (FTPCredentials.host === "localhost") {
       server = new ftpServer();
@@ -278,7 +281,7 @@ describe("jsftp test suite", function() {
     });
   });
 
-  it("test print working directory", function(next) {
+  it.only("test print working directory", function(next) {
     ftp.raw.pwd(function(err, res) {
       assert(!err, err);
 
@@ -335,8 +338,8 @@ describe("jsftp test suite", function() {
   it("test ftp node stat", function(next) {
     ftp.raw.pwd(function(err, res) {
       var parent = new RegExp('.*"(.*)".*').exec(res.text)[1];
-      var path = Path.resolve(parent + "/" + remoteCWD);
-      ftp.raw.stat(path, function(err, res) {
+      var _path = path.resolve(parent + "/" + remoteCWD);
+      ftp.raw.stat(_path, function(err, res) {
         assert.ok(!err, res);
         assert.ok(res);
 
