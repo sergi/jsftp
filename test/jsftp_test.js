@@ -22,7 +22,7 @@ var dbgServer = require('debug')('jsftp:test:server');
 
 var concat = function(bufs) {
   var buffer, length = 0,
-  index = 0;
+    index = 0;
 
   if (!Array.isArray(bufs))
     bufs = Array.prototype.slice.call(arguments);
@@ -811,6 +811,25 @@ describe("jsftp test suite", function() {
           assert.ok(!err);
           assert.equal(ftp.type, 'A');
           assert.equal(res.code, 200);
+          next();
+        });
+      });
+    });
+  });
+
+  it('test listing a folder containing special UTF characters', function(next) {
+    var dirName = '_éàèùâêûô_';
+    var newDir = Path.join(remoteCWD, dirName);
+    ftp.raw.mkd(newDir, function(err, res) {
+      assert.ok(!err);
+      assert.equal(res.code, 257);
+      ftp.ls(remoteCWD, function(err, res) {
+        assert.ok(!err);
+        assert.ok(res.some(function(el) {
+          return el.name.indexOf(dirName) > -1;
+        }));
+        ftp.raw.rmd(newDir, function(err, res) {
+          assert.ok(!err);
           next();
         });
       });
