@@ -237,20 +237,7 @@ describe("jsftp test suite", function() {
     next();
   });
 
-  it("test invalid username", function(next) {
-    this.timeout(10000);
-    ftp.auth(
-      FTPCredentials.user + '_invalid',
-      FTPCredentials.pass,
-      function(err, data) {
-        assert.equal(err.code, 530, err.message);
-        assert.equal(data, null);
-        next();
-      });
-  });
-
-  it("test invalid password", function(next) {
-    this.timeout(10000);
+  it.only("test invalid password", function(next) {
     ftp.auth(
       FTPCredentials.user,
       FTPCredentials.pass + '_invalid',
