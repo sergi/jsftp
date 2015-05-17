@@ -367,6 +367,16 @@ describe("jsftp test suite", function() {
     });
   });
 
+  it("test passing a dir instead of file path to put should callback with error", function (next) {
+      var localUploadPath = ".";
+      var remoteFileName  = "directory_file_upload_should_fail.txt";
+
+      ftp.put(localUploadPath, remoteFileName, function(hadError) {
+          assert.ok(hadError);
+          next();
+    });
+  });
+
   it("test streaming put", function(next) {
     var readStream = Fs.createReadStream(__filename);
     var remoteFileName = "file_ftp_test.txt";
