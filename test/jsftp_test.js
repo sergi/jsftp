@@ -17,46 +17,9 @@ var sinon = require("sinon");
 var EventEmitter = require("events").EventEmitter;
 var ftpServer = require("ftp-test-server");
 var rimraf = require("rimraf");
+var concat = require('concat-stream');
 
 var dbgServer = require('debug')('jsftp:test:server');
-
-var concat = function(bufs) {
-  var buffer, length = 0,
-    index = 0;
-
-  if (!Array.isArray(bufs))
-    bufs = Array.prototype.slice.call(arguments);
-
-  for (var i = 0, l = bufs.length; i < l; i++) {
-    buffer = bufs[i];
-    length += buffer.length;
-  }
-
-  buffer = new Buffer(length);
-
-  bufs.forEach(function(buf) {
-    buf.copy(buffer, index, 0, buf.length);
-    index += buf.length;
-  });
-
-  return buffer;
-};
-
-var concatStream = function(err, socket, callback) {
-  if (err) return callback(err);
-
-  var pieces = [];
-  socket.on("data", function(p) {
-    pieces.push(p);
-  });
-  socket.on("close", function(hadError) {
-    if (hadError)
-      return callback(new Error("Socket connection error"));
-
-    callback(null, concat(pieces));
-  });
-  socket.resume();
-};
 
 // Write down your system credentials. This test suite will use OSX internal
 // FTP server. If you want to test against a remote server, simply change the
@@ -237,7 +200,7 @@ describe("jsftp test suite", function() {
     next();
   });
 
-  it.only("test invalid password", function(next) {
+  it("test invalid password", function(next) {
     ftp.auth(
       FTPCredentials.user,
       FTPCredentials.pass + '_invalid',
@@ -655,11 +618,17 @@ describe("jsftp test suite", function() {
     var originalData = Fs.readFileSync(path);
     ftp.getGetSocket(getRemotePath("testfile.txt"), function(err, readable) {
       assert.ok(!err);
-      concatStream(err, readable, function(err, buffer) {
+      var concatStream = concat(function(buffer) {
         assert.ok(!err);
         assert.equal(buffer.toString(), originalData.toString());
         next();
       });
+
+      readable.on('error', function(err) {
+        throw new Error(err);
+      });
+
+      readable.pipe(concatStream);
     });
   });
 
@@ -680,13 +649,20 @@ describe("jsftp test suite", function() {
       assert.ok(!err);
       originalData.pipe(socket);
       originalData.resume();
-      concatStream(err, originalData, function(err, buffer) {
+
+      var concatStream = concat(function(buffer) {
         assert.ok(!err);
         Fs.readFile(path, "utf8", function(err, original) {
           assert.equal(buffer.toString("utf8"), original);
           next();
         });
       });
+
+      originalData.on('error', function(err) {
+        throw new Error(err);
+      });
+
+      originalData.pipe(concatStream);
     });
   });
 
