@@ -1,11 +1,16 @@
-jsftp [![Build Status](https://secure.travis-ci.org/sergi/jsftp.png)](http://travis-ci.org/sergi/jsftp) <a href="http://flattr.com/thing/1452098/" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" /></a>
-[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard)
-=====
+# jsftp [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![js-semistandard-style][semistandard-image]][semistandard-url]
+
+[travis-image]: https://img.shields.io/travis/sergi/jsftp.svg?style=flat
+[travis-url]: https://travis-ci.org/sergi/jsftp
+[npm-image]: https://img.shields.io/npm/v/jsftp.svg?style=flat
+[npm-url]: https://npmjs.org/package/jsftp
+[downloads-image]: https://img.shields.io/npm/dm/jsftp.svg?style=flat
+[downloads-url]: https://npmjs.org/package/jsftp
+[semistandard-image]: https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square
+[semistandard-url]: https://github.com/Flet/semistandard
 
 A client FTP library for NodeJS that focuses on correctness, clarity
 and conciseness. It doesn't get in the way and plays nice with streaming APIs.
-
-[![NPM](https://nodei.co/npm/jsftp.png)](https://nodei.co/npm/jsftp/)
 
 Starting it up
 --------------
