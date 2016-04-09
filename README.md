@@ -222,7 +222,7 @@ It can also be activated or deactivated by calling the `setDebugMode` method:
 
 ```javascript
 Ftp.setDebugMode(true); // Debug Mode on
-Ftp.setDebugMode(false; // Debug mode off
+Ftp.setDebugMode(false); // Debug mode off
 ```
 
 If the debug mode is on, the jsftp instance will emit `jsftp_debug` events with
