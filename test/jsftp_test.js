@@ -15,20 +15,30 @@ var Ftp = require("../");
 var Path = require("path");
 var sinon = require("sinon");
 var EventEmitter = require("events").EventEmitter;
-var ftpServer = require("ftp-test-server");
+var server = require('./server');
 var rimraf = require("rimraf");
 var concat = require('concat-stream');
+var ftpd = require('ftpd');
 
+var Server = ftpd.FtpServer;
 var dbgServer = require('debug')('jsftp:test:server');
 
-// Write down your system credentials. This test suite will use OSX internal
-// FTP server. If you want to test against a remote server, simply change the
+// If you want to test against a remote server, simply change the
 // `host` and `port` properties as well.
 var FTPCredentials = {
-  host: "localhost",
-  user: "user",
-  port: 3334,
-  pass: "12345"
+  host: process.env.IP || '127.0.0.1',
+  port: process.env.port || 3334,
+  user: 'user',
+  pass: '12345',
+  tlsOnly: false,
+  getInitialCwd: function() {
+    return options.cwd;
+  },
+  getRoot: function(connection, callback) {
+    var username = connection.username;
+    var root = path.join(fixturesPath, username);
+    fs.realpath(root, callback);
+  },
 };
 
 function getRemotePath(path) {
