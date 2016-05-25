@@ -32,7 +32,7 @@
     "concat-stream": "^1.5.0",
     "ftp-test-server": "0.0.2",
     "istanbul": "^0.3.22",
-    "mocha": "^1.21.4",
+    "mocha": "^2.5.3",
     "mocha-istanbul": "0.2.0",
     "rimraf": "^2.2.8",
     "sinon": "^1.17.1"
