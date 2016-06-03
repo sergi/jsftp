@@ -44,7 +44,11 @@
     "no-caller": 1,                       // disallow use of arguments.caller or arguments.callee
     "no-div-regex": 1,                    // disallow division operators explicitly at beginning of regular expression
     "no-else-return": 0,                  // disallow else after a return in an if
+<<<<<<< HEAD
     "no-labels": 1,                  // disallow use of labels for anything other then loops and switches
+=======
+    "no-empty-label": 1,                  // disallow use of labels for anything other then loops and switches
+>>>>>>> Switch to a Node.js server for testing, cleanup tests and small fixes
     "no-eq-null": 0,                      // disallow comparisons to null without a type-checking operator
     "no-eval": 1,                         // disallow use of eval()
     "no-extend-native": 1,                // disallow adding to native types
@@ -139,7 +143,11 @@
     "quote-props": [1, "as-needed"],      // require quotes around object literal property names
     "semi": 1,                            // require or disallow use of semicolons instead of ASI
     "sort-vars": 0,                       // sort variables within the same declaration block
+<<<<<<< HEAD
     "keyword-spacing": 1,            // require a space after certain keywords
+=======
+    "space-after-keywords": 1,            // require a space after certain keywords
+>>>>>>> Switch to a Node.js server for testing, cleanup tests and small fixes
     "space-before-blocks": 1,             // require a space before blocks
     "space-before-function-paren": [      // disallow a space before function parenthesis
       1, "never"
@@ -149,6 +157,10 @@
     ],
     "space-in-parens": 1,                 // require or disallow spaces inside parentheses
     "space-infix-ops": 1,                 // require spaces around operators
+<<<<<<< HEAD
+=======
+    "space-return-throw-case": 1,         // require a space after return, throw, and case
+>>>>>>> Switch to a Node.js server for testing, cleanup tests and small fixes
     "space-unary-ops": 1,                 // require a space around word operators such as typeof
     "max-nested-callbacks": 0,            // specify the maximum depth callbacks can be nested
     "one-var": [1, "never"],              // allow just one var statement per function
