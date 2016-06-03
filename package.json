@@ -31,6 +31,7 @@
   "devDependencies": {
     "concat-stream": "^1.5.0",
     "ftp-test-server": "0.0.2",
+    "ftpd": "^0.2.15",
     "istanbul": "^0.3.22",
     "mocha": "^1.21.4",
     "mocha-istanbul": "0.2.0",
