@@ -16,6 +16,7 @@ var sinon = require('sinon');
 var EventEmitter = require('events').EventEmitter;
 var rimraf = require('rimraf');
 var concat = require('concat-stream');
+var unorm = require('unorm');
 
 var ftpServer = require('./server');
 
@@ -39,7 +40,7 @@ function getLocalFixturesPath(path) {
 }
 
 function getRemoteFixturesPath(path) {
-  return Path.join('/', 'fixtures', path);
+  return Path.join('/', 'fixtures', path || '');
 }
 
 var remoteCWD = '/fixtures';
@@ -249,7 +250,7 @@ describe('jsftp test suite', function() {
     });
   });
 
-  it("test switch to unexistent CWD contains special string", function (next) {
+  it('test switch to unexistent CWD contains special string', function (next) {
     ftp.raw.cwd('/unexistentDir/user', function (err, res) {
       var code = parseInt(res.code, 10);
       assert.equal(code, 550);
@@ -257,7 +258,7 @@ describe('jsftp test suite', function() {
     });
   });
 
-  it("test passive listing of current directory", function(next) {
+  it('test passive listing of current directory', function(next) {
     ftp.list(remoteCWD, function(err, res) {
       assert.ok(!err, err);
       assert.ok(res.length > 0);
@@ -601,6 +602,7 @@ describe('jsftp test suite', function() {
         var str = '';
         ftp.getGetSocket(remoteCopy, function(err, socket) {
           assert.ok(!err, err);
+
           socket.on('data', function(d) {
             str += d;
           });
@@ -682,33 +684,6 @@ describe('jsftp test suite', function() {
     });
   });
 
-  it.skip('Test for correct data on ls 1', function(next) {
-    var paths = ['test/fixtures/testfile.txt', 'work/test/main.css'];
-    ftp.auth(options.user, options.pass, function(err, data) {
-      if (err) {
-        return console.log(err);
-      }
-
-      var processed = 0;
-      ftp.ls(paths[0], function showFile(err, res) {
-        assert.ok(!err);
-        assert.strictEqual(res[0].name, 'testfile.txt');
-        processed += 1;
-        if (processed === 2) {
-          next();
-        }
-      });
-
-      ftp.ls(paths[1], function showFile(err, res1) {
-        assert.ok(!!err);
-        processed += 1;
-        if (processed === 2) {
-          next();
-        }
-      });
-    });
-  });
-
   it('Test raw method with PWD', function(next) {
     ftp.raw('pwd', function(err, res) {
       assert(!err, err);
@@ -741,7 +716,7 @@ describe('jsftp test suite', function() {
     }, 5000);
   });
 
-  it.skip('Test handling error on simultaneous PASV requests {#90}', function(next) {
+  it('Test handling error on simultaneous PASV requests {#90}', function(next) {
     var file1 = getRemoteFixturesPath('testfile.txt');
     var file2 = getRemoteFixturesPath('testfile2.txt');
 
@@ -787,21 +762,16 @@ describe('jsftp test suite', function() {
   });
 
   it.skip('test listing a folder containing special UTF characters', function(next) {
-    var dirName = '_éàèùâêûô_';
+    var dirName = unorm.nfc('_éàèùâêûô_');
     var newDir = Path.join(remoteCWD, dirName);
     ftp.raw.mkd(newDir, function(err, res) {
       assert.ok(!err);
       assert.equal(res.code, 257);
-      ftp.ls(remoteCWD, function(err, res) {
-        assert.ok(!err);
-        assert.ok(res.some(function(el) {
-          return el.name.indexOf(dirName) > -1;
-        }));
-        ftp.raw.rmd(newDir, function(err, res) {
-          assert.ok(!err);
-          next();
-        });
-      });
+      var list = Fs.readdirSync(Path.join(__dirname, 'fixtures'));
+      assert.ok(list.some(function(dir) {
+        return unorm.nfc(dir.trim()) === dirName;
+      }));
+      next();
     });
   });
 });
