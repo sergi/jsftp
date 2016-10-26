@@ -212,7 +212,7 @@ describe('jsftp test suite', function() {
   });
 
   it('test print working directory', function(next) {
-    ftp.raw.pwd(function(err, res) {
+    ftp.raw('pwd', function(err, res) {
       assert(!err, err);
 
       var code = parseInt(res.code, 10);
@@ -223,13 +223,13 @@ describe('jsftp test suite', function() {
   });
 
   it('test switch CWD', function(next) {
-    ftp.raw.cwd(remoteCWD, function(err, res) {
+    ftp.raw('cwd', remoteCWD, function(err, res) {
       assert.ok(!err, err);
 
       var code = parseInt(res.code, 10);
       assert.ok(code === 200 || code === 250, 'CWD command was not successful');
 
-      ftp.raw.pwd(function(err, res) {
+      ftp.raw('pwd', function(err, res) {
         assert.ok(!err, err);
 
         var code = parseInt(res.code, 10);
@@ -241,7 +241,7 @@ describe('jsftp test suite', function() {
   });
 
   it('test switch to unexistent CWD', function(next) {
-    ftp.raw.cwd('/unexistentDir/', function(err, res) {
+    ftp.raw('cwd', '/unexistentDir/', function(err, res) {
       var code = parseInt(res.code, 10);
       assert.ok(!!err);
       assert.equal(code, 550, 'A (wrong) CWD command was successful. It should have failed');
@@ -250,7 +250,7 @@ describe('jsftp test suite', function() {
   });
 
   it('test switch to unexistent CWD contains special string', function (next) {
-    ftp.raw.cwd('/unexistentDir/user', function (err, res) {
+    ftp.raw('cwd', '/unexistentDir/user', function (err, res) {
       var code = parseInt(res.code, 10);
       assert.equal(code, 550);
       next();
@@ -275,11 +275,11 @@ describe('jsftp test suite', function() {
   });
 
   it('test ftp node stat', function(next) {
-    ftp.raw.pwd(function(err, res) {
+    ftp.raw('pwd', function(err, res) {
       assert.ok(!err);
       var parent = new RegExp('.*"(.*)".*').exec(res.text)[1];
       var path = Path.resolve(parent + '/' + remoteCWD);
-      ftp.raw.stat(path, function(err, res) {
+      ftp.raw('stat', path, function(err, res) {
         assert.ok(!err, res);
         assert.ok(res);
 
@@ -291,11 +291,11 @@ describe('jsftp test suite', function() {
 
   it('test create and delete a directory', function(next) {
     var newDir = remoteCWD + '/ftp_test_dir';
-    ftp.raw.mkd(newDir, function(err, res) {
+    ftp.raw('mkd', newDir, function(err, res) {
       assert.ok(!err);
       assert.equal(res.code, 257);
 
-      ftp.raw.rmd(newDir, function(err, res) {
+      ftp.raw('rmd', newDir, function(err, res) {
         assert.ok(!err);
         next();
       });
@@ -304,11 +304,11 @@ describe('jsftp test suite', function() {
 
   it('test create and delete a directory containing a space', function(next) {
     var newDir = remoteCWD + '/ftp test dür';
-    ftp.raw.mkd(newDir, function(err, res) {
+    ftp.raw('mkd', newDir, function(err, res) {
       assert.ok(!err);
       assert.equal(res.code, 257);
 
-      ftp.raw.rmd(newDir, function(err, res) {
+      ftp.raw('rmd', newDir, function(err, res) {
         assert.ok(!err);
         next();
       });
@@ -326,7 +326,7 @@ describe('jsftp test suite', function() {
         assert.equal(buffer.length,
                      Fs.statSync(Path.join(process.cwd(), 'test/jsftp_test.js')).size);
 
-        ftp.raw.dele(filePath, function(err, data) {
+        ftp.raw('dele', filePath, function(err, data) {
           assert.ok(!err);
           next();
         });
@@ -348,7 +348,7 @@ describe('jsftp test suite', function() {
       assert.equal(data.action, 'put');
       assert.ok(typeof data.transferred, 'number');
 
-      ftp.raw.dele(filePath, function(err, data) {
+      ftp.raw('dele', filePath, function(err, data) {
         assert.ok(!err);
         next();
       });
@@ -377,7 +377,7 @@ describe('jsftp test suite', function() {
       var originalFileSize = Fs.statSync(__filename).size;
       assert.equal(uploadedFileSize, originalFileSize);
 
-      ftp.raw.dele(filePath, function(err, data) {
+      ftp.raw('dele', filePath, function(err, data) {
         assert.ok(!err);
         next();
       });
@@ -398,7 +398,7 @@ describe('jsftp test suite', function() {
 
           assert.equal(buffer.length, Fs.statSync(__filename).size);
 
-          ftp.raw.dele(to, function(err, data) {
+          ftp.raw('dele', to, function(err, data) {
             assert.ok(!err);
             next();
           });
@@ -475,7 +475,7 @@ describe('jsftp test suite', function() {
       socket.on('close', function() {
         assert.equal(buffer.length, counter);
 
-        ftp.raw.dele(remotePath, function(err, data) {
+        ftp.raw('dele', remotePath, function(err, data) {
           assert.ok(!err);
           next();
         });
@@ -497,7 +497,7 @@ describe('jsftp test suite', function() {
     }, function(err, res) {
       assert.ok(!err, err);
 
-      ftp.raw.dele(remotePath, function(err, data) {
+      ftp.raw('dele', remotePath, function(err, data) {
         assert.ok(!err);
         next();
       });
@@ -518,7 +518,7 @@ describe('jsftp test suite', function() {
   it('test get fileList array', function(next) {
     var file1 = 'testfile.txt';
 
-    ftp.raw.cwd(getRemoteFixturesPath(''), function() {
+    ftp.raw('cwd', getRemoteFixturesPath(''), function() {
       ftp.ls('.', function(err, res) {
         assert.ok(!err, err);
         assert.ok(Array.isArray(res));
@@ -537,13 +537,13 @@ describe('jsftp test suite', function() {
 
   it('test reconnect', function(next) {
     this.timeout(10000);
-    ftp.raw.pwd(function(err, res) {
+    ftp.raw('pwd', function(err, res) {
       if (err) {
         throw err;
       }
 
       ftp.socket.destroy();
-      ftp.raw.quit(function(err, res) {
+      ftp.raw('quit', function(err, res) {
         if (err) {
           throw err;
         }
@@ -763,7 +763,7 @@ describe('jsftp test suite', function() {
   it.skip('test listing a folder containing special UTF characters', function(next) {
     var dirName = unorm.nfc('_éàèùâêûô_');
     var newDir = Path.join(remoteCWD, dirName);
-    ftp.raw.mkd(newDir, function(err, res) {
+    ftp.raw('mkd', newDir, function(err, res) {
       assert.ok(!err);
       assert.equal(res.code, 257);
       var list = Fs.readdirSync(Path.join(__dirname, 'fixtures'));
