@@ -101,9 +101,8 @@ Contains the system identification string for the remote FTP server.
 
 ### Methods
 
-#### Ftp.raw.FTP_COMMAND([params], callback)
-All the standard FTP commands are available under the `raw` namespace. These
-commands might accept parameters or not, but they always accept a callback
+#### Ftp.raw(command, callback)
+With the `raw` method you can send any FTP command to the server. The method accepts a callback
 with the signature `err, data`, in which `err` is the error response coming
 from the server (usually a 4xx or 5xx error code) and the data is an object
 that contains two properties: `code` and `text`. `code` is an integer indicating

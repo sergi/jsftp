@@ -34,7 +34,6 @@ var options = {
   tls: null
 };
 
-
 function getLocalFixturesPath(path) {
   return Path.join(process.cwd(), 'test', 'fixtures', path);
 }
