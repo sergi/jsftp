@@ -40,7 +40,7 @@
   },
   "main": "lib/jsftp.js",
   "engines": {
-    "node": ">=0.10"
+    "node": ">= 4"
   },
   "scripts": {
     "test": "mocha -R spec -t 5000",
