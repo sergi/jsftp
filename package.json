@@ -33,7 +33,7 @@
     "ftp-test-server": "0.0.2",
     "ftpd": "^0.2.15",
     "istanbul": "^0.3.22",
-    "mocha": "^1.21.4",
+    "mocha": "^3.2.0",
     "mocha-istanbul": "0.2.0",
     "rimraf": "^2.2.8",
     "sinon": "^1.17.1"
