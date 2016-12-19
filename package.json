@@ -29,7 +29,7 @@
     "unorm": "^1.4.1"
   },
   "devDependencies": {
-    "concat-stream": "^1.5.0",
+    "concat-stream": "^1.6.0",
     "ftp-test-server": "0.0.2",
     "ftpd": "^0.2.15",
     "istanbul": "^0.3.22",
