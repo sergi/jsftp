@@ -36,12 +36,12 @@ callback, in the form of an object that contains two properties: `code`, which
 is the response code of the FTP operation, and `text`, which is the complete
 text of the response.
 
-Raw (or native) commands are accessible in the form `Ftp.raw["command"](params, callback)`
+Raw (or native) commands are accessible in the form `Ftp.raw(command, params, callback)`
 
 Thus, a command like `QUIT` will be called like this:
 
 ```javascript
-Ftp.raw.quit(function(err, data) {
+Ftp.raw("quit", function(err, data) {
     if (err) return console.error(err);
 
     console.log("Bye!");
@@ -51,7 +51,7 @@ Ftp.raw.quit(function(err, data) {
 and a command like `MKD` (make directory), which accepts parameters, looks like this:
 
 ```javascript
-Ftp.raw.mkd("/new_dir", function(err, data) {
+Ftp.raw("mkd", "/new_dir", function(err, data) {
     if (err) return console.error(err);
 
     console.log(data.text); // Show the FTP response text to the user
@@ -101,7 +101,7 @@ Contains the system identification string for the remote FTP server.
 
 ### Methods
 
-#### Ftp.raw(command, callback)
+#### Ftp.raw(command, [...args], callback)
 With the `raw` method you can send any FTP command to the server. The method accepts a callback
 with the signature `err, data`, in which `err` is the error response coming
 from the server (usually a 4xx or 5xx error code) and the data is an object
