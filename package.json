@@ -21,7 +21,7 @@
     "url": "https://github.com/sergi/jsftp/issues"
   },
   "dependencies": {
-    "debug": "^2.2.0",
+    "debug": "^2.6.0",
     "ftp-response-parser": "^1.0.1",
     "once": "^1.3.3",
     "parse-listing": "^1.1.3",
@@ -29,18 +29,18 @@
     "unorm": "^1.4.1"
   },
   "devDependencies": {
-    "concat-stream": "^1.5.0",
+    "concat-stream": "^1.6.0",
     "ftp-test-server": "0.0.2",
-    "ftpd": "^0.2.15",
+    "ftpd": "sstur/nodeftpd#0d299f7",
     "istanbul": "^0.3.22",
-    "mocha": "^1.21.4",
+    "mocha": "^3.2.0",
     "mocha-istanbul": "0.2.0",
     "rimraf": "^2.2.8",
-    "sinon": "^1.17.1"
+    "sinon": "^1.17.7"
   },
   "main": "lib/jsftp.js",
   "engines": {
-    "node": ">=0.10"
+    "node": ">=0.12"
   },
   "scripts": {
     "test": "mocha -R spec -t 5000",
