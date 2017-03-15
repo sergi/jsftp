@@ -36,7 +36,7 @@
     "mocha": "^1.21.4",
     "mocha-istanbul": "0.2.0",
     "rimraf": "^2.2.8",
-    "sinon": "^1.17.1"
+    "sinon": "^2.0.0"
   },
   "main": "lib/jsftp.js",
   "engines": {
