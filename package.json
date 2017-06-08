@@ -32,11 +32,11 @@
     "concat-stream": "^1.6.0",
     "ftp-test-server": "0.0.2",
     "ftpd": "sstur/nodeftpd#0d299f7",
-    "istanbul": "^0.3.22",
+    "istanbul": "^0.4.5",
     "mocha": "^3.2.0",
-    "mocha-istanbul": "0.2.0",
+    "mocha-istanbul": "0.3.0",
     "rimraf": "^2.2.8",
-    "sinon": "^1.17.7"
+    "sinon": "^2.3.2"
   },
   "main": "lib/jsftp.js",
   "engines": {
