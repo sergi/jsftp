@@ -1,5 +1,7 @@
 # jsftp [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![js-semistandard-style][semistandard-image]][semistandard-url]
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/sergi/jsftp.svg)](https://greenkeeper.io/)
+
 [travis-image]: https://img.shields.io/travis/sergi/jsftp.svg?style=flat
 [travis-url]: https://travis-ci.org/sergi/jsftp
 [npm-image]: https://img.shields.io/npm/v/jsftp.svg?style=flat
