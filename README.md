@@ -1,12 +1,11 @@
-# jsftp [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![js-semistandard-style][semistandard-image]][semistandard-url]
+# jsftp [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![styled with prettier](https://img.shields.io/badge/styled_with-prettier-ff69b4.svg)]
 
 [travis-image]: https://img.shields.io/travis/sergi/jsftp.svg?style=flat
 [travis-url]: https://travis-ci.org/sergi/jsftp
 [npm-image]: https://img.shields.io/npm/v/jsftp.svg?style=flat
 [npm-url]: https://npmjs.org/package/jsftp
 [downloads-image]: https://img.shields.io/npm/dm/jsftp.svg?style=flat
-[downloads-url]: https://npmjs.org/package/jsftp
-[![styled with prettier](https://img.shields.io/badge/styled_with-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
+[downloads-url]: https://npmjs.org/package/jsftp(https://github.com/prettier/prettier)
 
 A client FTP library for NodeJS that focuses on correctness, clarity
 and conciseness. It doesn't get in the way and plays nice with streaming APIs.
