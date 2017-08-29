@@ -6,8 +6,7 @@
 [npm-url]: https://npmjs.org/package/jsftp
 [downloads-image]: https://img.shields.io/npm/dm/jsftp.svg?style=flat
 [downloads-url]: https://npmjs.org/package/jsftp
-[semistandard-image]: https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square
-[semistandard-url]: https://github.com/Flet/semistandard
+[![styled with prettier](https://img.shields.io/badge/styled_with-prettier-ff69b4.svg)](https://github.com/prettier/prettier)
 
 A client FTP library for NodeJS that focuses on correctness, clarity
 and conciseness. It doesn't get in the way and plays nice with streaming APIs.
