@@ -1,4 +1,4 @@
-# jsftp [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![styled with prettier](https://img.shields.io/badge/styled_with-prettier-ff69b4.svg)]
+# jsftp [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![styled with prettier]][https://img.shields.io/badge/styled_with-prettier-ff69b4.svg]
 
 [travis-image]: https://img.shields.io/travis/sergi/jsftp.svg?style=flat
 [travis-url]: https://travis-ci.org/sergi/jsftp
