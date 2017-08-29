@@ -33,9 +33,9 @@
     "ftp-test-server": "0.0.2",
     "ftpd": "sstur/nodeftpd#0d299f7",
     "istanbul": "^0.3.22",
-    "mocha": "^3.2.0",
+    "mocha": "^3.5.0",
     "mocha-istanbul": "0.2.0",
-    "rimraf": "^2.2.8",
+    "rimraf": "^2.6.1",
     "sinon": "^1.17.7"
   },
   "main": "lib/jsftp.js",

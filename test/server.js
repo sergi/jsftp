@@ -1,12 +1,12 @@
-var ftpd = require('ftpd');
+var ftpd = require("ftpd");
 
-var _user = 'user';
-var _pass = '12345';
+var _user = "user";
+var _pass = "12345";
 
 function makeServer(options) {
   var server = new ftpd.FtpServer(options.host, {
     getInitialCwd: function() {
-      return options.cwd || '/';
+      return options.cwd || "/";
     },
     getRoot: function() {
       return options.root || process.cwd();
@@ -17,17 +17,17 @@ function makeServer(options) {
     allowUnauthorizedTls: false,
     useWriteFile: false,
     useReadFile: false,
-    uploadMaxSlurpSize: 7000, // N/A unless 'useWriteFile' is true.
+    uploadMaxSlurpSize: 7000 // N/A unless 'useWriteFile' is true.
   });
 
-  server.on('error', function(error) {
-    console.log('FTP Server error:', error);
+  server.on("error", function(error) {
+    console.log("FTP Server error:", error);
   });
 
-  server.on('client:connected', function(connection) {
+  server.on("client:connected", function(connection) {
     var username = null;
-    console.log('client connected: ' + connection.remoteAddress);
-    connection.on('command:user', function(user, success, failure) {
+    console.log("client connected: " + connection.remoteAddress);
+    connection.on("command:user", function(user, success, failure) {
       if (_user === user) {
         username = user;
         success();
@@ -36,7 +36,7 @@ function makeServer(options) {
       }
     });
 
-    connection.on('command:pass', function(pass, success, failure) {
+    connection.on("command:pass", function(pass, success, failure) {
       if (_pass === pass) {
         success(username);
       } else {
