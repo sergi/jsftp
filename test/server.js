@@ -26,7 +26,6 @@ function makeServer(options) {
 
   server.on("client:connected", function(connection) {
     var username = null;
-    console.log("client connected: " + connection.remoteAddress);
     connection.on("command:user", function(user, success, failure) {
       if (_user === user) {
         username = user;
@@ -45,7 +44,7 @@ function makeServer(options) {
     });
   });
 
-  server.debugging = 4;
+  server.debugging = -1;
   return server;
 }
 
