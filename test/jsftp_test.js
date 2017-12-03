@@ -52,9 +52,7 @@ describe("jsftp test suite", function() {
     setTimeout(done, 100);
   });
 
-  after(done => {
-    _server.close(() => done());
-  });
+  after(done => _server.close(done));
 
   beforeEach(done => {
     rimraf(getLocalFixturesPath(""), () => {
