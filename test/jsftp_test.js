@@ -45,11 +45,14 @@ function getRemoteFixturesPath(path) {
 var remoteCWD = "/fixtures";
 describe("jsftp test suite", function() {
   var ftp;
+  var _server;
   before(function(done) {
-    var _server = ftpServer.makeServer(options);
+    _server = ftpServer.makeServer(options);
     _server.listen(options.port);
     setTimeout(done, 100);
   });
+
+  after(done => _server.close(done));
 
   beforeEach(done => {
     rimraf(getLocalFixturesPath(""), () => {
@@ -370,7 +373,6 @@ describe("jsftp test suite", function() {
     });
 
     it("test streaming put", function(next) {
-      const ftp = new Ftp(options);
       const readStream = Fs.createReadStream(__filename);
       const remoteFileName = "file_ftp_test.txt";
       const filePath = getRemoteFixturesPath(remoteFileName);
@@ -386,6 +388,7 @@ describe("jsftp test suite", function() {
         next();
       });
     });
+
     it("test put a big file stream", function(next) {
       var remotePath = getRemoteFixturesPath("bigfile.test");
       var data = new Array(1 * 1024 * 1024).join("x");
@@ -432,6 +435,7 @@ describe("jsftp test suite", function() {
         }
       );
     });
+
   });
 
   it("test rename a file", function(next) {
@@ -659,8 +663,10 @@ describe("jsftp test suite", function() {
   it("Test that onConnect is called", function(next) {
     var ftp2 = new Ftp(options);
     ftp2.on("connect", function() {
+      ftp2.destroy();
       next();
     });
+
   });
 
   it("Test raw method with PWD", function(next) {
@@ -763,4 +769,5 @@ describe("jsftp test suite", function() {
       next();
     });
   });
+
 });
