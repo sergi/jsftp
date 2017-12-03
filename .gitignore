@@ -9,3 +9,4 @@ node_modules
 coverage.html
 lib-cov
 reports
+.nyc_output
