@@ -374,9 +374,7 @@ describe("jsftp test suite", function() {
       });
     });
 
-    // THIS TEST HANGS
-    it.skip("test streaming put", function(next) {
-      const ftp = new Ftp(options);
+    it("test streaming put", function(next) {
       const readStream = Fs.createReadStream(__filename);
       const remoteFileName = "file_ftp_test.txt";
       const filePath = getRemoteFixturesPath(remoteFileName);
