@@ -1,7 +1,7 @@
 {
   "name": "jsftp",
   "id": "jsftp",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "A sane FTP client implementation for NodeJS",
   "keywords": [
     "ftp",
