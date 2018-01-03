@@ -77,6 +77,9 @@ Ftp.raw("mkd", "/new_dir", (err, data) => {
   port: 3333, // Port number for the current FTP server (defaults to 21).
   user: 'user', // Username
   pass: 'pass', // Password
+  createSocket: ({port, host}, firstAction) => {
+    return net.createConnection({port, host}, firstAction);
+  }, // function that creates the socket, default uses net.createConnection
 }
 ```
 
