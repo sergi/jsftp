@@ -10,6 +10,7 @@
 
 var assert = require("assert");
 var Fs = require("fs");
+var Net = require("net");
 var Ftp = require("../");
 var Path = require("path");
 var sinon = require("sinon");
@@ -78,6 +79,37 @@ describe("jsftp test suite", function() {
       ftp.auth(options.user, options.pass + "_invalid", (err, data) => {
         assert.equal(err.code, 530);
         assert.equal(data, null);
+        next();
+      });
+    });
+
+    it("test createSocket options", function(next) {
+      var createConnection = sinon.spy(Net, "createConnection");
+      var ftp2 = new Ftp(Object.assign(options, {
+        createSocket(opts) {
+          return createConnection(opts);
+        }
+      }));
+
+      assert.ok(createConnection.calledWith({port: 7002, host: "127.0.0.1"}));
+      ftp2.destroy();
+      createConnection.restore();
+      next();
+    });
+
+    it("test createSocket options also applies to passive mode", function(next) {
+      var createConnection = sinon.spy(Net, "createConnection");
+      var ftp2 = new Ftp(Object.assign(options, {
+        createSocket(opts) {
+          return createConnection(opts);
+        }
+      }));
+
+      assert.ok(createConnection.calledWith({port: 7002, host: "127.0.0.1"}));
+      ftp2.list(remoteCWD, function() {
+        assert.ok(createConnection.calledWith({port: 1025, host: "127.0.0.1"}));
+        ftp2.destroy();
+        createConnection.restore();
         next();
       });
     });
@@ -769,5 +801,4 @@ describe("jsftp test suite", function() {
       next();
     });
   });
-
 });
