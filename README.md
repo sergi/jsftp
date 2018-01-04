@@ -83,6 +83,34 @@ Ftp.raw("mkd", "/new_dir", (err, data) => {
 }
 ```
 
+* `options.createSocket` could be used to implement a proxy for the ftp socket, e.g. socksv5
+
+```javascript
+const {SocksClient} = require('socks');
+const ftp = new Ffp({
+  host: 'localhost',
+  port: 3333,
+  user: 'user',
+  pass: 'password',
+  createSocket: ({port, host}, firstAction) => {
+    return SocksClient.createConnection({
+      proxy: {
+        ipaddress: '159.203.75.200'
+        port: 1080,
+        type: 5
+      },
+
+      command: 'connect',
+
+      destination: {
+        host,
+        port 
+      }
+    })
+  }
+})
+```
+
 Creates a new Ftp instance.
 
 #### Ftp.host
