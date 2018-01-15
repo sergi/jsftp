@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  pureftpd:
+    container_name: ftpd_server
+    environment:
+      - PUBLICHOST=localhost
+      - ADDED_FLAGS=-d -d
+    build: ./pureftpd
+    ports:
+      - "21:21"
+      - "30000-30009:30000-30009"
+    # expose:
+    #   - "21"
+    #   - "30000-30009"
+  vsftpd:
+    container_name: vsftpd_server
+    environment:
+      - FTP_USER=bob
+      - FTP_PASS=test
+      - PASV_MIN_PORT=21100
+      - PASV_MAX_PORT=21110 
+    build: ./vsftpd
+    ports:
+      - "7001:21"
+      - "21100-21110:21100-21110"
+  # integration-test:
+  #   build: ..
+  #   environment:
+  #     - DEBUG=jsftp
+  #   command: npm run test
+  #   links:
+  #     - pureftpd

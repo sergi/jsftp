@@ -3,5 +3,13 @@ coverage.html
 lib-cov
 reports
 .c9revisions
-test
+/test/
+/.vscode
+.nyc_output
+.editorconfig
+.eslintrc
+.travis.yml
+Dockerfile
+jsconfig.json
+README.md
 node_modules

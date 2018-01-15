@@ -17,9 +17,9 @@ conciseness. It doesn't get in the way and plays nice with streaming APIs.
 ## Starting it up
 
 ```javascript
-var JSFtp = require("jsftp");
+const jsftp = require("jsftp");
 
-var Ftp = new JSFtp({
+const Ftp = new jsftp({
   host: "myserver.com",
   port: 3331, // defaults to 21
   user: "user", // defaults to "anonymous"
@@ -37,8 +37,7 @@ callback, in the form of an object that contains two properties: `code`, which
 is the response code of the FTP operation, and `text`, which is the complete
 text of the response.
 
-Raw (or native) commands are accessible in the form `Ftp.raw(command, params,
-callback)`
+Raw (or native) commands are accessible in the form `Ftp.raw(command, params, callback)`
 
 Thus, a command like `QUIT` will be called like this:
 
@@ -104,7 +103,7 @@ const ftp = new Ffp({
 
       destination: {
         host,
-        port 
+        port
       }
     })
   }
@@ -161,9 +160,7 @@ file properties.
 
 ```javascript
 ftp.ls(".", (err, res) => {
-  res.forEach(file => {
-    console.log(file.name);
-  });
+  res.forEach(file => console.log(file.name));
 });
 ```
 
@@ -200,7 +197,9 @@ ftp.get("remote/path/file.txt", (err, socket) => {
   });
 
   socket.on("close", err => {
-    if (hadErr) console.error("There was an error retrieving the file.");
+    if (hadErr) {
+      console.error("There was an error retrieving the file.");
+    }
   });
 
   socket.resume();
@@ -306,19 +305,24 @@ Ftp.on("jsftp_debug", function(eventType, data) {
 
 ## Tests and Coverage
 
+JSFtp tests against ProFTPD by default. To accomplish that, it uses a Docker set-up, so you'll need Docker installed in your machine in order to run tests.
+
 To run tests and coverage reports:
 
     npm test
 
     ...
-    41 tests passing (6s)
+    43 passing (10s)
 
-    |----------|----------|----------|----------|----------|----------------|
-    |File      |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
-    |----------|----------|----------|----------|----------|----------------|
-    |All files |       88 |    74.87 |    95.45 |       88 |                |
-    | jsftp.js |       88 |    74.87 |    95.45 |       88 |... 693,695,704 |
-    |----------|----------|----------|----------|----------|----------------|
+    |-----------|----------|----------|----------|----------|----------------|
+    |File       |  % Stmts | % Branch |  % Funcs |  % Lines |Uncovered Lines |
+    |-----------|----------|----------|----------|----------|----------------|
+    |All files  |    86.47 |    73.17 |    95.45 |    86.47 |                |
+    |jsftp      |      100 |      100 |      100 |      100 |                |
+    |  index.js |      100 |      100 |      100 |      100 |                |
+    |jsftp/lib  |    86.43 |    73.17 |    95.45 |    86.43 |                |
+    |  jsftp.js |    86.43 |    73.17 |    95.45 |    86.43 |... 722,724,733 |
+    |-----------|----------|----------|----------|----------|----------------|
 
 ## License
 
