@@ -307,6 +307,8 @@ Ftp.on("jsftp_debug", function(eventType, data) {
 
 JSFtp tests against ProFTPD by default. To accomplish that, it uses a Docker set-up, so you'll need Docker installed in your machine in order to run tests.
 
+Please note that the first time you run the tests it will take a while, given that it has to download, configure and run the containerized ProFTPD server.
+
 To run tests and coverage reports:
 
     npm test

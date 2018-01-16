@@ -34,7 +34,8 @@
     "node": ">=6"
   },
   "scripts": {
-    "test": "make -f test/Makefile test-pureftpd",
+    "build-test": "make -f test/Makefile build-pureftpd",
+    "test": "npm run build-test && make -f test/Makefile test-pureftpd",
     "run-mocha": "nyc mocha -R spec -t 5000",
     "clean": "rm -rf reports",
     "check-format": "prettier --list-different ./lib/**"
