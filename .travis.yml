@@ -1,10 +1,17 @@
+sudo: required
+
 language: node_js
+
+services:
+  - docker
+
 node_js:
     - "6"
     - "8"
     - "9"
-os:
-    - linux
-    - osx
+
 before_script:
     - npm install --dev
+
+script:
+    - npm run test
